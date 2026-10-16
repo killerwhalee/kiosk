@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>관리자</title>
+  <link rel="stylesheet" href="/common.css">
+  <style>
+    main { padding: 16px; max-width: 1100px; margin: 0 auto; }
+    section { margin-bottom: 24px; }
+    h2 { margin: 0 0 10px; font-size: 1.2rem; }
+    .card { padding: 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+    .stat .label { color: var(--muted); font-size: 0.9rem; }
+    .stat .value { font-size: 1.8rem; font-weight: 800; margin-top: 4px; }
+    .stat .sub { color: var(--muted); font-size: 0.9rem; margin-top: 2px; }
+
+    .menus { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+    .menu-row { display: flex; align-items: center; gap: 12px; }
+    .menu-row .info { flex: 1; }
+    .menu-row .name { font-weight: 800; font-size: 1.2rem; }
+
+    .links { display: flex; flex-wrap: wrap; gap: 10px; }
+    .links a { padding: 10px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); color: var(--text); text-decoration: none; font-weight: 700; }
+
+    .table-wrap { overflow-x: auto; }
+    table.orders { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+    table.orders th, table.orders td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    table.orders th { background: #faf8f4; font-size: 0.9rem; color: var(--muted); }
+    table.orders td.items { white-space: normal; min-width: 160px; }
+    table.orders tr.cancelled td { color: var(--muted); text-decoration: line-through; }
+    table.orders tr.cancelled td:last-child { text-decoration: none; }
+    table.orders .btn { padding: 6px 12px; font-size: 0.9rem; }
+    .filter { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .filter .btn { padding: 8px 14px; font-size: 0.95rem; }
+    .filter .btn.active { background: var(--text); color: #fff; }
+
+    .danger-zone { border: 2px dashed var(--danger); }
+    .danger-zone p { margin: 0 0 12px; }
+
+    .pin input { width: 100%; padding: 16px; font-size: 1.4rem; border: 2px solid var(--line); border-radius: var(--radius); text-align: center; letter-spacing: 0.3em; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <h1 id="title">관리자</h1>
+    <span id="conn" class="conn">연결 중…</span>
+  </header>
+
+  <main>
+    <section>
+      <h2>오늘 현황</h2>
+      <div class="stats" id="stats"></div>
+    </section>
+
+    <section>
+      <h2>메뉴 품절 관리</h2>
+      <div class="menus" id="menus"></div>
+    </section>
+
+    <section>
+      <h2>화면 바로가기</h2>
+      <div class="links" id="links"></div>
+    </section>
+
+    <section>
+      <h2>주문 목록</h2>
+      <div class="filter" id="filter">
+        <button class="btn active" data-filter="active">진행 중</button>
+        <button class="btn" data-filter="all">전체</button>
+        <button class="btn" data-filter="cancelled">취소됨</button>
+      </div>
+      <div class="table-wrap">
+        <table class="orders">
+          <thead>
+            <tr><th>#</th><th>시각</th><th>테이블</th><th>메뉴</th><th>금액</th><th>진행 상태</th><th></th></tr>
+          </thead>
+          <tbody id="orders"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <div class="card danger-zone">
+        <h2>전체 초기화</h2>
+        <p class="muted">리허설 후 당일 시작 전에 사용하세요. 모든 주문과 품절 표시가 지워집니다. (기존 데이터는 data 폴더에 백업 파일로 남습니다)</p>
+        <button class="btn btn-danger" id="reset">전체 주문 초기화</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="overlay" id="pin-dialog" hidden>
+    <div class="dialog pin">
+      <h2>관리자 PIN</h2>
+      <input id="pin" type="password" inputmode="numeric" autocomplete="off">
+      <div class="actions"><button class="btn btn-primary" id="pin-ok">확인</button></div>
+    </div>
+  </div>
+
+  <script src="/common.js"></script>
+  <script>
+    'use strict';
+    const $ = (id) => document.getElementById(id);
+    const { esc, won } = Kiosk;
+
+    let state = null;
+    let filter = 'active';
+    let pin = '';
+    try { pin = sessionStorage.getItem('kiosk-admin-pin') || ''; } catch { /* 저장 불가 */ }
+
+    function adminApi(path, body) {
+      return Kiosk.api(path, body, { 'X-Admin-Pin': pin }).catch((err) => {
+        if (err.status === 401) askPin();
+        throw err;
+      });
+    }
+
+    function askPin() {
+      $('pin-dialog').hidden = false;
+      $('pin').value = '';
+      $('pin').focus();
+    }
+
+    async function checkPin() {
+      try {
+        await Kiosk.api('/api/admin/check', {}, { 'X-Admin-Pin': pin });
+        $('pin-dialog').hidden = true;
+        return true;
+      } catch (err) {
+        if (err.status === 401) askPin();
+        return false;
+      }
+    }
+
+    function isDone(o) {
+      return o.tickets.every((t) => t.status === 'served');
+    }
+
+    function renderStats() {
+      const valid = state.orders.filter((o) => !o.cancelled);
+      const revenue = valid.reduce((s, o) => s + o.total, 0);
+      const perMenu = {};
+      for (const o of valid) for (const t of o.tickets) for (const it of t.items) perMenu[it.menuId] = (perMenu[it.menuId] || 0) + it.qty;
+      const tickets = valid.flatMap((o) => o.tickets);
+      const count = (st) => tickets.filter((t) => t.status === st).length;
+
+      const boxes = [
+        { label: '총 매출', value: won(revenue), sub: `주문 ${valid.length}건` },
+        ...state.menus.map((m) => ({
+          label: m.name,
+          value: `${perMenu[m.id] || 0}개`,
+          sub: won((perMenu[m.id] || 0) * m.price),
+        })),
+        { label: '진행 상태 (주방별 주문표)', value: `${count('pending')} / ${count('requested')} / ${count('served')}`, sub: '대기 / 주방 요청 / 서빙 완료' },
+      ];
+      $('stats').innerHTML = boxes.map((b) => `
+        <div class="card stat">
+          <div class="label">${esc(b.label)}</div>
+          <div class="value">${esc(b.value)}</div>
+          <div class="sub">${esc(b.sub)}</div>
+        </div>`).join('');
+    }
+
+    function renderMenus() {
+      $('menus').innerHTML = state.menus.map((m) => {
+        const station = state.stations.find((s) => s.id === m.station);
+        return `
+          <div class="card menu-row">
+            <div class="info">
+              <div class="name">${esc(m.name)}</div>
+              <div class="muted">${won(m.price)} · ${esc(station ? station.name : '')}</div>
+            </div>
+            <button class="btn ${m.soldOut ? 'btn-danger' : ''}" data-soldout="${esc(m.id)}" data-value="${m.soldOut ? 'false' : 'true'}">
+              ${m.soldOut ? '품절 해제' : '품절 처리'}
+            </button>
+          </div>`;
+      }).join('');
+    }
+
+    function renderLinks() {
+      $('links').innerHTML = [
+        { href: '/order', label: '🧾 주문 입력' },
+        ...state.stations.map((s) => ({ href: `/station/${s.id}`, label: `🍳 ${s.name}` })),
+      ].map((l) => `<a href="${l.href}" target="_blank">${esc(l.label)}</a>`).join('');
+    }
+
+    function renderOrders() {
+      let list = state.orders.slice().reverse();
+      if (filter === 'active') list = list.filter((o) => !o.cancelled && !isDone(o));
+      if (filter === 'cancelled') list = list.filter((o) => o.cancelled);
+      if (!list.length) {
+        $('orders').innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center">주문이 없습니다.</td></tr>';
+        return;
+      }
+      $('orders').innerHTML = list.map((o) => {
+        const items = o.tickets.flatMap((t) => t.items).map((it) => `${esc(it.name)} ${it.qty}`).join(', ');
+        const statuses = o.cancelled
+          ? '<span class="badge cancelled">취소됨</span>'
+          : o.tickets.map((t) => {
+              const s = state.stations.find((x) => x.id === t.stationId);
+              return `<span class="badge ${t.status}">${esc(s ? s.name : t.stationId)}: ${Kiosk.STATUS_LABEL[t.status]}</span>`;
+            }).join(' ');
+        return `
+          <tr class="${o.cancelled ? 'cancelled' : ''}">
+            <td>${o.id}</td>
+            <td>${Kiosk.time(o.createdAt)}</td>
+            <td><b>${o.tableNo}번</b></td>
+            <td class="items">${items}${o.note ? `<div class="muted">📝 ${esc(o.note)}</div>` : ''}</td>
+            <td>${won(o.total)}</td>
+            <td>${statuses}</td>
+            <td>${o.cancelled
+              ? `<button class="btn" data-cancel="${o.id}" data-value="false">취소 철회</button>`
+              : `<button class="btn btn-ghost" data-cancel="${o.id}" data-value="true">주문 취소</button>`}</td>
+          </tr>`;
+      }).join('');
+    }
+
+    function render() {
+      if (!state) return;
+      document.title = `관리자 · ${state.title}`;
+      $('title').textContent = `${state.title} · 관리자`;
+      renderStats();
+      renderMenus();
+      renderLinks();
+      renderOrders();
+    }
+
+    $('menus').addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-soldout]');
+      if (!btn) return;
+      try {
+        await adminApi(`/api/menus/${btn.dataset.soldout}/sold-out`, { soldOut: btn.dataset.value === 'true' });
+      } catch (err) {
+        Kiosk.toast(err.message, true);
+      }
+    });
+
+    $('orders').addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-cancel]');
+      if (!btn) return;
+      const cancel = btn.dataset.value === 'true';
+      if (cancel && !confirm(`주문 #${btn.dataset.cancel} 을(를) 취소할까요? 주방 화면에서도 사라집니다.`)) return;
+      try {
+        await adminApi(`/api/orders/${btn.dataset.cancel}/cancel`, { cancelled: cancel });
+        Kiosk.toast(cancel ? '주문을 취소했습니다.' : '주문 취소를 철회했습니다.');
+      } catch (err) {
+        Kiosk.toast(err.message, true);
+      }
+    });
+
+    $('filter').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-filter]');
+      if (!btn) return;
+      filter = btn.dataset.filter;
+      for (const b of $('filter').querySelectorAll('button')) b.classList.toggle('active', b === btn);
+      renderOrders();
+    });
+
+    $('reset').addEventListener('click', async () => {
+      const answer = prompt('모든 주문이 지워집니다. 계속하려면 "초기화"라고 입력하세요.');
+      if (answer !== '초기화') return;
+      try {
+        await adminApi('/api/reset');
+        Kiosk.toast('초기화했습니다.');
+      } catch (err) {
+        Kiosk.toast(err.message, true);
+      }
+    });
+
+    $('pin-ok').addEventListener('click', async () => {
+      pin = $('pin').value;
+      try { sessionStorage.setItem('kiosk-admin-pin', pin); } catch { /* 저장 불가 */ }
+      if (!(await checkPin())) Kiosk.toast('PIN이 올바르지 않습니다.', true);
+    });
+    $('pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('pin-ok').click(); });
+
+    checkPin();
+    Kiosk.connect((s) => { state = s; render(); });
+  </script>
+</body>
+</html>

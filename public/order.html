@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>주문 입력</title>
+  <link rel="stylesheet" href="/common.css">
+  <style>
+    body { min-height: 100vh; display: flex; flex-direction: column; }
+    main { flex: 1; padding: 16px; max-width: 760px; width: 100%; margin: 0 auto; }
+    h2 { margin: 8px 0 16px; font-size: 1.6rem; }
+
+    /* 1단계: 테이블 선택 */
+    .tables { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .tables button {
+      aspect-ratio: 1.3;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      font-size: 2.6rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .tables button small { display: block; font-size: 0.95rem; font-weight: 600; color: var(--muted); }
+
+    .recent { margin-top: 28px; }
+    .recent h3 { margin: 0 0 8px; font-size: 1rem; color: var(--muted); }
+    .recent ul { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--radius); }
+    .recent li { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); }
+    .recent li:first-child { border-top: none; }
+    .recent .tno { font-weight: 800; min-width: 3.2em; }
+    .recent .items { flex: 1; }
+
+    /* 2단계: 메뉴 선택 */
+    .table-head { display: flex; align-items: center; gap: 12px; margin: 4px 0 18px; }
+    .table-head .tno { font-size: 2rem; font-weight: 800; flex: 1; }
+    .menus { display: flex; flex-direction: column; gap: 14px; }
+    .menu {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      border-radius: 20px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .menu.sold-out { opacity: 0.45; }
+    .menu .info { flex: 1; }
+    .menu .name { font-size: 1.8rem; font-weight: 800; }
+    .menu .price { margin-top: 4px; color: var(--muted); font-size: 1.1rem; }
+    .stepper { display: flex; align-items: center; gap: 10px; }
+    .stepper button { width: 68px; height: 68px; font-size: 2.2rem; font-weight: 700; background: var(--line); }
+    .stepper button.plus { background: var(--primary); color: #fff; }
+    .stepper .qty { min-width: 2ch; text-align: center; font-size: 2.2rem; font-weight: 800; }
+    .note { margin-top: 18px; }
+    .note input {
+      width: 100%;
+      padding: 16px;
+      font: inherit;
+      font-size: 1.1rem;
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .cartbar {
+      position: sticky;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px;
+      background: var(--surface);
+      border-top: 1px solid var(--line);
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+    }
+    .cartbar .sum { flex: 1; }
+    .cartbar .count { color: var(--muted); }
+    .cartbar .total { font-size: 1.7rem; font-weight: 800; }
+    .cartbar .btn { padding: 20px 28px; font-size: 1.3rem; }
+
+    /* 확인 / 완료 */
+    .lines { width: 100%; border-collapse: collapse; font-size: 1.25rem; }
+    .lines td { padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .lines td:last-child { text-align: right; }
+    .lines tr.total td { border-bottom: none; font-weight: 800; font-size: 1.5rem; padding-top: 16px; }
+    .confirm-table { font-size: 2.2rem; font-weight: 800; margin-bottom: 12px; color: var(--primary); }
+    .done { text-align: center; padding: 40px 0; }
+    .done .check { font-size: 5rem; }
+    .done h2 { font-size: 2.2rem; }
+    .done .btn { margin-top: 20px; padding: 18px 40px; font-size: 1.2rem; }
+
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <h1 id="title">주문 입력</h1>
+    <span id="conn" class="conn">연결 중…</span>
+  </header>
+
+  <main>
+    <section id="step-table">
+      <h2>테이블을 선택하세요</h2>
+      <div class="tables" id="tables"></div>
+      <div class="recent" id="recent"></div>
+    </section>
+
+    <section id="step-menu" hidden>
+      <div class="table-head">
+        <div class="tno" id="current-table"></div>
+        <button class="btn btn-ghost" id="change-table">테이블 변경</button>
+      </div>
+      <div class="menus" id="menus"></div>
+      <div class="note"><input id="note" maxlength="100" placeholder="요청사항 (선택)"></div>
+    </section>
+
+    <section id="step-done" class="done" hidden>
+      <div class="check">✅</div>
+      <h2 id="done-title"></h2>
+      <p class="muted" id="done-desc"></p>
+      <button class="btn btn-primary" id="done-next">새 주문</button>
+    </section>
+  </main>
+
+  <footer class="cartbar" id="cartbar" hidden>
+    <div class="sum">
+      <div class="count" id="cart-count"></div>
+      <div class="total" id="cart-total"></div>
+    </div>
+    <button class="btn btn-primary" id="review" disabled>주문 확인</button>
+  </footer>
+
+  <div class="overlay" id="confirm" hidden>
+    <div class="dialog">
+      <div class="confirm-table" id="confirm-table"></div>
+      <table class="lines" id="confirm-lines"></table>
+      <p class="muted" id="confirm-note"></p>
+      <div class="actions">
+        <button class="btn" id="confirm-cancel">수정</button>
+        <button class="btn btn-primary" id="confirm-send">주문 전송</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/common.js"></script>
+  <script>
+    'use strict';
+    const $ = (id) => document.getElementById(id);
+    const { esc, won } = Kiosk;
+
+    let state = null;
+    let table = null;
+    let cart = {};            // menuId -> qty
+    let pendingRequestId = null;
+    let sending = false;
+    let doneTimer = null;
+
+    function show(step) {
+      for (const s of ['table', 'menu', 'done']) $(`step-${s}`).hidden = s !== step;
+      $('cartbar').hidden = step !== 'menu';
+      window.scrollTo(0, 0);
+    }
+
+    function resetOrder() {
+      table = null;
+      cart = {};
+      pendingRequestId = null;
+      $('note').value = '';
+      clearTimeout(doneTimer);
+      renderTables();
+      show('table');
+    }
+
+    function renderTables() {
+      if (!state) return;
+      const active = activeCountByTable();
+      $('tables').innerHTML = Array.from({ length: state.tables }, (_, i) => {
+        const n = i + 1;
+        const sub = active[n] ? `<small>진행 중 ${active[n]}건</small>` : '<small>&nbsp;</small>';
+        return `<button data-table="${n}">${n}${sub}</button>`;
+      }).join('');
+
+      const recent = state.orders.filter((o) => !o.cancelled).slice(-5).reverse();
+      $('recent').innerHTML = recent.length
+        ? `<h3>최근 주문</h3><ul>${recent.map((o) => `
+            <li>
+              <span class="tno">${o.tableNo}번</span>
+              <span class="items">${o.tickets.flatMap((t) => t.items).map((it) => `${esc(it.name)} ${it.qty}`).join(', ')}</span>
+              <span class="muted">${Kiosk.time(o.createdAt)}</span>
+            </li>`).join('')}</ul>`
+        : '';
+    }
+
+    function activeCountByTable() {
+      const counts = {};
+      for (const o of state.orders) {
+        if (o.cancelled || o.tickets.every((t) => t.status === 'served')) continue;
+        counts[o.tableNo] = (counts[o.tableNo] || 0) + 1;
+      }
+      return counts;
+    }
+
+    function renderMenus() {
+      if (!state || table == null) return;
+      $('current-table').textContent = `${table}번 테이블`;
+      $('menus').innerHTML = state.menus.map((m) => {
+        const qty = cart[m.id] || 0;
+        return `
+          <div class="menu ${m.soldOut ? 'sold-out' : ''}">
+            <div class="info">
+              <div class="name">${esc(m.name)}</div>
+              <div class="price">${m.soldOut ? '품절' : won(m.price)}</div>
+            </div>
+            <div class="stepper">
+              <button data-menu="${esc(m.id)}" data-delta="-1" ${qty === 0 ? 'disabled' : ''} aria-label="빼기">−</button>
+              <span class="qty">${qty}</span>
+              <button class="plus" data-menu="${esc(m.id)}" data-delta="1" ${m.soldOut ? 'disabled' : ''} aria-label="더하기">+</button>
+            </div>
+          </div>`;
+      }).join('');
+      renderCart();
+    }
+
+    function cartLines() {
+      return state.menus
+        .filter((m) => cart[m.id] > 0)
+        .map((m) => ({ menu: m, qty: cart[m.id] }));
+    }
+
+    function renderCart() {
+      const lines = cartLines();
+      const count = lines.reduce((s, l) => s + l.qty, 0);
+      const total = lines.reduce((s, l) => s + l.qty * l.menu.price, 0);
+      $('cart-count').textContent = count ? `${count}개 선택` : '메뉴를 선택하세요';
+      $('cart-total').textContent = won(total);
+      $('review').disabled = count === 0;
+    }
+
+    function openConfirm() {
+      const lines = cartLines();
+      if (!lines.length) return;
+      const total = lines.reduce((s, l) => s + l.qty * l.menu.price, 0);
+      $('confirm-table').textContent = `${table}번 테이블`;
+      $('confirm-lines').innerHTML =
+        lines.map((l) => `<tr><td>${esc(l.menu.name)} × ${l.qty}</td><td>${won(l.qty * l.menu.price)}</td></tr>`).join('') +
+        `<tr class="total"><td>합계</td><td>${won(total)}</td></tr>`;
+      const note = $('note').value.trim();
+      $('confirm-note').textContent = note ? `요청사항: ${note}` : '';
+      if (!pendingRequestId) pendingRequestId = Kiosk.requestId();
+      $('confirm').hidden = false;
+    }
+
+    async function sendOrder() {
+      if (sending) return;
+      sending = true;
+      $('confirm-send').disabled = true;
+      $('confirm-send').textContent = '전송 중…';
+      try {
+        const order = await Kiosk.api('/api/orders', {
+          tableNo: table,
+          items: Object.entries(cart).map(([menuId, qty]) => ({ menuId, qty })),
+          note: $('note').value,
+          requestId: pendingRequestId,
+        });
+        $('confirm').hidden = true;
+        $('done-title').textContent = `${order.tableNo}번 테이블 주문 완료`;
+        $('done-desc').textContent = `주문번호 ${order.id} · ${won(order.total)}`;
+        show('done');
+        table = null;
+        cart = {};
+        pendingRequestId = null;
+        $('note').value = '';
+        doneTimer = setTimeout(resetOrder, 4000);
+      } catch (err) {
+        // 네트워크 오류일 때는 같은 requestId 로 다시 보내므로 중복 주문이 생기지 않는다.
+        Kiosk.toast(err.status ? err.message : '전송 실패 — 연결을 확인하고 다시 눌러 주세요.', true);
+        if (err.status === 409 || err.status === 400) pendingRequestId = null;
+      } finally {
+        sending = false;
+        $('confirm-send').disabled = false;
+        $('confirm-send').textContent = '주문 전송';
+      }
+    }
+
+    $('tables').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-table]');
+      if (!btn) return;
+      table = Number(btn.dataset.table);
+      renderMenus();
+      show('menu');
+    });
+
+    $('menus').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-menu]');
+      if (!btn) return;
+      const id = btn.dataset.menu;
+      cart[id] = Math.max(0, Math.min(99, (cart[id] || 0) + Number(btn.dataset.delta)));
+      if (!cart[id]) delete cart[id];
+      pendingRequestId = null;
+      renderMenus();
+    });
+
+    $('change-table').addEventListener('click', () => {
+      renderTables();
+      show('table');
+    });
+    $('review').addEventListener('click', openConfirm);
+    $('confirm-cancel').addEventListener('click', () => { $('confirm').hidden = true; });
+    $('confirm-send').addEventListener('click', sendOrder);
+    $('note').addEventListener('input', () => { pendingRequestId = null; });
+    $('done-next').addEventListener('click', resetOrder);
+
+    Kiosk.connect((s) => {
+      state = s;
+      document.title = `주문 입력 · ${s.title}`;
+      $('title').textContent = `${s.title} · 주문 입력`;
+      // 품절된 메뉴가 장바구니에 있으면 뺀다.
+      for (const m of s.menus) if (m.soldOut && cart[m.id]) { delete cart[m.id]; Kiosk.toast(`${m.name} 품절 — 장바구니에서 뺐습니다.`, true); }
+      if (!$('step-table').hidden) renderTables();
+      if (!$('step-menu').hidden) renderMenus();
+    });
+  </script>
+</body>
+</html>

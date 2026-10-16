@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>주방</title>
+  <link rel="stylesheet" href="/common.css">
+  <style>
+    main { padding: 14px; max-width: 1100px; margin: 0 auto; }
+
+    /* 주방에 요청할 수량 요약 */
+    .summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .sum-box { padding: 16px; border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
+    .sum-box h3 { margin: 0 0 6px; font-size: 1rem; }
+    .sum-box.pending h3 { color: var(--pending); }
+    .sum-box.requested h3 { color: var(--requested); }
+    .sum-box .qty { font-size: 2.2rem; font-weight: 800; line-height: 1.25; }
+    .sum-box .qty .zero { color: var(--line); }
+    .sum-box .btn { width: 100%; margin-top: 10px; padding: 16px; font-size: 1.15rem; }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 22px 0 10px;
+      font-size: 1.15rem;
+    }
+    .section-title .count { color: var(--muted); font-weight: 600; }
+    .empty { padding: 18px; text-align: center; color: var(--muted); background: var(--surface); border-radius: var(--radius); }
+
+    .tickets { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+    .ticket {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 18px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      border-left: 10px solid var(--line);
+    }
+    .ticket.pending { border-left-color: var(--pending); }
+    .ticket.requested { border-left-color: var(--requested); }
+    .ticket.served { border-left-color: var(--served); opacity: 0.75; }
+    .ticket.late .elapsed { color: var(--danger); font-weight: 800; }
+    .ticket.fresh { animation: flash 1s ease-in-out 3; }
+    @keyframes flash { 50% { background: #fff3b0; } }
+
+    .ticket .head { display: flex; align-items: baseline; gap: 10px; }
+    .ticket .tno { font-size: 2.6rem; font-weight: 900; line-height: 1; }
+    .ticket .tno small { font-size: 1.1rem; font-weight: 700; }
+    .ticket .meta { margin-left: auto; text-align: right; font-size: 0.9rem; color: var(--muted); }
+    .ticket .items { font-size: 1.6rem; font-weight: 800; }
+    .ticket .note { padding: 8px 10px; border-radius: 10px; background: #fff7d6; font-weight: 600; }
+    .ticket .buttons { display: flex; gap: 8px; }
+    .ticket .buttons .btn { flex: 1; padding: 16px 10px; font-size: 1.15rem; }
+    .ticket .buttons .btn-ghost { flex: 0 0 auto; }
+
+    details.served-list summary { cursor: pointer; list-style: none; }
+    details.served-list summary::-webkit-details-marker { display: none; }
+    details.served-list summary::after { content: ' ▸'; color: var(--muted); }
+    details.served-list[open] summary::after { content: ' ▾'; }
+
+    .start {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 24px;
+      text-align: center;
+      background: var(--text);
+      color: #fff;
+    }
+    .start[hidden] { display: none; }
+    .start h2 { margin: 0; font-size: 2.2rem; }
+    .start .btn { padding: 22px 48px; font-size: 1.4rem; }
+
+    body.alert-flash::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      pointer-events: none;
+      border: 14px solid var(--pending);
+      animation: blink 0.5s 4;
+    }
+
+    @media (max-width: 520px) {
+      .summary { grid-template-columns: 1fr; }
+      .sum-box .qty { font-size: 1.8rem; }
+      #sound-toggle .label { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <h1 id="title">주방</h1>
+    <button class="btn" id="sound-toggle">🔔 알림음 켜짐</button>
+    <span id="conn" class="conn">연결 중…</span>
+  </header>
+
+  <main>
+    <div class="summary">
+      <div class="sum-box pending">
+        <h3>대기 중 — 주방에 요청할 수량</h3>
+        <div class="qty" id="sum-pending"></div>
+        <button class="btn btn-requested" id="request-all">모두 주방에 요청</button>
+      </div>
+      <div class="sum-box requested">
+        <h3>주방 요청됨 — 조리 중</h3>
+        <div class="qty" id="sum-requested"></div>
+      </div>
+    </div>
+
+    <div class="section-title"><span class="badge pending">대기</span><span class="count" id="count-pending"></span></div>
+    <div class="tickets" id="list-pending"></div>
+
+    <div class="section-title"><span class="badge requested">주방 요청</span><span class="count" id="count-requested"></span></div>
+    <div class="tickets" id="list-requested"></div>
+
+    <details class="served-list" id="served-details">
+      <summary class="section-title"><span class="badge served">서빙 완료</span><span class="count" id="count-served"></span></summary>
+      <div class="tickets" id="list-served"></div>
+    </details>
+  </main>
+
+  <div class="start" id="start">
+    <h2 id="start-title">주방 화면</h2>
+    <p>화면을 눌러 시작하세요.<br>새 주문이 들어오면 알림음이 울립니다.</p>
+    <button class="btn btn-primary" id="start-btn">시작하기</button>
+  </div>
+
+  <script src="/common.js"></script>
+  <script>
+    'use strict';
+    const $ = (id) => document.getElementById(id);
+    const { esc } = Kiosk;
+    const stationId = Number(location.pathname.split('/').pop());
+    const LATE_MINUTES = 10;
+    const SERVED_SHOWN = 20;
+
+    let state = null;
+    let seen = null;          // 이미 화면에 표시한 티켓 키
+    const fresh = new Set();  // 방금 들어와 깜빡일 티켓
+    const storage = {
+      get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+      set(k, v) { try { localStorage.setItem(k, v); } catch { /* 저장 불가 */ } },
+    };
+    let soundOn = storage.get('kiosk-sound') !== 'off';
+    let audioCtx = null;
+
+    function beep() {
+      if (!soundOn || !audioCtx) return;
+      const t0 = audioCtx.currentTime;
+      [880, 1175, 880, 1175].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, t0 + i * 0.18);
+        gain.gain.exponentialRampToValueAtTime(0.5, t0 + i * 0.18 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.18 + 0.16);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t0 + i * 0.18);
+        osc.stop(t0 + i * 0.18 + 0.17);
+      });
+    }
+
+    function alertNew() {
+      beep();
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      document.body.classList.remove('alert-flash');
+      void document.body.offsetWidth;
+      document.body.classList.add('alert-flash');
+      setTimeout(() => document.body.classList.remove('alert-flash'), 2200);
+    }
+
+    function renderSoundToggle() {
+      $('sound-toggle').innerHTML = soundOn ? '🔔<span class="label"> 알림음 켜짐</span>' : '🔕<span class="label"> 알림음 꺼짐</span>';
+    }
+
+    /** 이 주방에 해당하는 티켓 목록 (취소된 주문 제외) */
+    function myTickets() {
+      const list = [];
+      for (const order of state.orders) {
+        if (order.cancelled) continue;
+        const ticket = order.tickets.find((t) => t.stationId === stationId);
+        // seenKey 에 주문 시각을 넣어, 초기화 후 주문번호가 다시 1부터 시작해도 새 주문으로 인식한다.
+        if (ticket) list.push({ order, ticket, key: `${order.id}-${stationId}`, seenKey: `${order.id}@${order.createdAt}` });
+      }
+      return list;
+    }
+
+    function sumByMenu(entries) {
+      const totals = new Map();
+      for (const { ticket } of entries) {
+        for (const it of ticket.items) totals.set(it.name, (totals.get(it.name) || 0) + it.qty);
+      }
+      return totals;
+    }
+
+    function menuNames() {
+      return state.menus.filter((m) => m.station === stationId).map((m) => m.name);
+    }
+
+    function renderSum(el, entries) {
+      const totals = sumByMenu(entries);
+      const names = [...new Set([...menuNames(), ...totals.keys()])];
+      el.innerHTML = names.map((name) => {
+        const n = totals.get(name) || 0;
+        return `<div${n ? '' : ' class="zero"'}>${esc(name)} ${n}개</div>`;
+      }).join('') || '<div class="zero">—</div>';
+    }
+
+    function ticketHtml({ order, ticket, key }) {
+      const since = ticket.status === 'requested' ? ticket.requestedAt : ticket.status === 'served' ? ticket.servedAt : order.createdAt;
+      const late = ticket.status !== 'served' && Kiosk.elapsedMinutes(order.createdAt) >= LATE_MINUTES;
+      const items = ticket.items.map((it) => `<div>${esc(it.name)} × ${it.qty}</div>`).join('');
+      const note = order.note ? `<div class="note">📝 ${esc(order.note)}</div>` : '';
+      let buttons = '';
+      if (ticket.status === 'pending') {
+        buttons = `<button class="btn btn-requested" data-key="${key}" data-status="requested">주방 요청</button>`;
+      } else if (ticket.status === 'requested') {
+        buttons = `<button class="btn btn-ghost" data-key="${key}" data-status="pending" title="대기로 되돌리기">↩︎</button>
+                   <button class="btn btn-served" data-key="${key}" data-status="served">서빙 완료</button>`;
+      } else {
+        buttons = `<button class="btn btn-ghost" data-key="${key}" data-status="requested">↩︎ 서빙 완료 취소</button>`;
+      }
+      return `
+        <div class="ticket ${ticket.status} ${late ? 'late' : ''} ${fresh.has(key) ? 'fresh' : ''}">
+          <div class="head">
+            <div class="tno">${order.tableNo}<small>번 테이블</small></div>
+            <div class="meta">주문 #${order.id}<br><span class="elapsed">${Kiosk.time(order.createdAt)} · ${Kiosk.elapsed(order.createdAt)}</span></div>
+          </div>
+          <div class="items">${items}</div>
+          ${note}
+          <div class="buttons">${buttons}</div>
+        </div>`;
+    }
+
+    function renderList(id, entries, emptyText) {
+      $(id).innerHTML = entries.length ? entries.map(ticketHtml).join('') : `<div class="empty">${emptyText}</div>`;
+    }
+
+    function render() {
+      if (!state) return;
+      const station = state.stations.find((s) => s.id === stationId);
+      if (!station) {
+        document.querySelector('main').innerHTML = '<div class="empty">없는 주방 번호입니다. 주소를 확인해 주세요.</div>';
+        return;
+      }
+      const label = `${station.name} (${menuNames().join(', ')})`;
+      document.title = `${station.name} · ${state.title}`;
+      $('title').textContent = label;
+      $('start-title').textContent = label;
+
+      const all = myTickets();
+      const pending = all.filter((e) => e.ticket.status === 'pending');
+      const requested = all.filter((e) => e.ticket.status === 'requested');
+      const served = all.filter((e) => e.ticket.status === 'served')
+        .sort((a, b) => b.ticket.servedAt.localeCompare(a.ticket.servedAt))
+        .slice(0, SERVED_SHOWN);
+
+      renderSum($('sum-pending'), pending);
+      renderSum($('sum-requested'), requested);
+      const pendingQty = [...sumByMenu(pending).values()].reduce((a, b) => a + b, 0);
+      $('request-all').disabled = pendingQty === 0;
+      $('request-all').textContent = pendingQty ? `대기 ${pending.length}건 모두 주방에 요청` : '대기 중인 주문 없음';
+
+      $('count-pending').textContent = `${pending.length}건`;
+      $('count-requested').textContent = `${requested.length}건`;
+      $('count-served').textContent = `최근 ${served.length}건`;
+      renderList('list-pending', pending, '대기 중인 주문이 없습니다.');
+      renderList('list-requested', requested, '주방에 요청한 주문이 없습니다.');
+      renderList('list-served', served, '아직 서빙한 주문이 없습니다.');
+    }
+
+    function onState(s) {
+      state = s;
+      const mine = myTickets();
+      if (seen === null) {
+        seen = new Set(mine.map((e) => e.seenKey));
+      } else {
+        const incoming = mine.filter((e) => e.ticket.status === 'pending' && !seen.has(e.seenKey));
+        for (const { key, seenKey } of incoming) {
+          seen.add(seenKey);
+          fresh.add(key);
+          setTimeout(() => { fresh.delete(key); render(); }, 3500);
+        }
+        if (incoming.length) alertNew();
+      }
+      render();
+    }
+
+    async function changeStatus(key, status) {
+      const [orderId] = key.split('-');
+      try {
+        await Kiosk.api(`/api/orders/${orderId}/tickets/${stationId}/status`, { status });
+      } catch (err) {
+        Kiosk.toast(err.status ? err.message : '전송 실패 — 연결을 확인해 주세요.', true);
+      }
+    }
+
+    document.querySelector('main').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-key]');
+      if (!btn) return;
+      btn.disabled = true;
+      changeStatus(btn.dataset.key, btn.dataset.status);
+    });
+
+    $('request-all').addEventListener('click', async () => {
+      $('request-all').disabled = true;
+      try {
+        await Kiosk.api(`/api/stations/${stationId}/request-all`);
+      } catch (err) {
+        Kiosk.toast(err.status ? err.message : '전송 실패 — 연결을 확인해 주세요.', true);
+        render();
+      }
+    });
+
+    $('sound-toggle').addEventListener('click', () => {
+      soundOn = !soundOn;
+      storage.set('kiosk-sound', soundOn ? 'on' : 'off');
+      renderSoundToggle();
+      if (soundOn) beep();
+    });
+
+    $('start-btn').addEventListener('click', () => {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) {
+        audioCtx = new Ctx();
+        audioCtx.resume();
+      }
+      beep();
+      Kiosk.keepAwake();
+      $('start').hidden = true;
+    });
+
+    // 경과 시간 표시를 주기적으로 갱신
+    setInterval(render, 20000);
+
+    renderSoundToggle();
+    Kiosk.connect(onState);
+  </script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+'use strict';
+
+/* 모든 화면이 함께 쓰는 도우미: 실시간 연결, API 호출, 표시 형식 */
+const Kiosk = (() => {
+  const STATUS_LABEL = { pending: '대기', requested: '주방 요청', served: '서빙 완료' };
+
+  function setConn(ok) {
+    const el = document.getElementById('conn');
+    if (!el) return;
+    el.classList.toggle('ok', ok);
+    el.classList.toggle('bad', !ok);
+    el.textContent = ok ? '연결됨' : '연결 끊김 — 재연결 중';
+  }
+
+  /** 서버에서 전체 상태를 실시간으로 받는다. 끊기면 자동으로 다시 연결하고 최신 상태를 새로 받는다. */
+  function connect(onState) {
+    let source;
+    let retryTimer;
+    const open = () => {
+      clearTimeout(retryTimer);
+      source = new EventSource('/api/events');
+      source.onopen = () => setConn(true);
+      source.onmessage = (e) => {
+        setConn(true);
+        onState(JSON.parse(e.data));
+      };
+      source.onerror = () => {
+        setConn(false);
+        if (source.readyState === EventSource.CLOSED) {
+          retryTimer = setTimeout(open, 2000);
+        }
+      };
+    };
+    open();
+  }
+
+  async function api(path, body, headers = {}) {
+    const res = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(body || {}),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = new Error(data.error || `요청 실패 (${res.status})`);
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  }
+
+  let toastTimer;
+  function toast(message, isError = false) {
+    let el = document.querySelector('.toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'toast';
+      document.body.appendChild(el);
+    }
+    el.textContent = message;
+    el.classList.toggle('error', isError);
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), isError ? 4000 : 2500);
+  }
+
+  const won = (n) => `${Number(n).toLocaleString('ko-KR')}원`;
+
+  const time = (iso) =>
+    new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+  function elapsedMinutes(iso) {
+    return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+  }
+
+  function elapsed(iso) {
+    const min = elapsedMinutes(iso);
+    return min < 1 ? '방금' : `${min}분 전`;
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  }
+
+  function requestId() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  /** 화면 꺼짐 방지 (HTTPS 또는 localhost 에서만 동작) */
+  async function keepAwake() {
+    if (!('wakeLock' in navigator)) return false;
+    const acquire = async () => {
+      try {
+        await navigator.wakeLock.request('screen');
+      } catch {
+        /* 지원하지 않거나 거부됨 */
+      }
+    };
+    await acquire();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') acquire();
+    });
+    return true;
+  }
+
+  return { STATUS_LABEL, connect, api, toast, won, time, elapsed, elapsedMinutes, esc, requestId, keepAwake };
+})();

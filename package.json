@@ -1,0 +1,14 @@
+{
+  "name": "kiosk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "후원자 일일 찻집 주문 시스템",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
