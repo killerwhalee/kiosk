@@ -154,5 +154,20 @@ const Kiosk = (() => {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => renderIcons());
   else renderIcons();
 
-  return { STATUS_LABEL, icon, renderIcons, connect, api, toast, won, time, elapsed, elapsedMinutes, esc, requestId, keepAwake };
+  /*
+   * 처음 화면(역할 선택)으로 돌아가기 전에 확인할 내용이 있으면 메시지를 돌려주는 함수를 등록한다.
+   * 예: 장바구니에 담긴 메뉴가 있을 때, 주방 화면에서 알림음이 멈출 때
+   */
+  let leaveGuard = null;
+  function setLeaveGuard(fn) {
+    leaveGuard = fn;
+  }
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a.home-btn');
+    if (!link || !leaveGuard) return;
+    const message = leaveGuard();
+    if (message && !confirm(message)) e.preventDefault();
+  });
+
+  return { STATUS_LABEL, setLeaveGuard, icon, renderIcons, connect, api, toast, won, time, elapsed, elapsedMinutes, esc, requestId, keepAwake };
 })();

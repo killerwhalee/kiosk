@@ -66,6 +66,26 @@ button:active:not(:disabled) { transform: scale(0.97); }
 .topbar h1 { margin: 0; font-size: 1.25rem; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar .btn { padding: 8px 14px; font-size: 0.95rem; }
 
+.home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.home-btn:active { background: rgba(255, 255, 255, 0.25); }
+.home-btn .icon { width: 1.3em; height: 1.3em; }
+@media (max-width: 520px) {
+  .home-btn .label { display: none; }
+}
+
 .conn {
   font-variant-numeric: tabular-nums;
   display: inline-flex;

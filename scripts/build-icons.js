@@ -25,6 +25,7 @@ const NAMES = [
   'clock',
   'external-link',
   'hand-platter',
+  'house',
   'minus',
   'play',
   'plus',

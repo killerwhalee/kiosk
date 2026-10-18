@@ -105,6 +105,7 @@
 </head>
 <body>
   <header class="topbar">
+    <a class="home-btn" href="/" aria-label="처음 화면으로"><i data-icon="house"></i><span class="label">처음 화면</span></a>
     <h1 id="title">주방</h1>
     <button class="btn" id="sound-toggle"></button>
     <span id="conn" class="conn">연결 중…</span>
@@ -393,6 +394,9 @@
 
     // 경과 시간 표시를 주기적으로 갱신
     setInterval(render, 20000);
+
+    Kiosk.setLeaveGuard(() =>
+      '이 화면을 나가면 새 주문 알림을 받을 수 없습니다. 처음 화면으로 갈까요?');
 
     renderSoundToggle();
     Kiosk.connect(onState);

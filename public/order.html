@@ -96,6 +96,7 @@
 </head>
 <body>
   <header class="topbar">
+    <a class="home-btn" href="/" aria-label="처음 화면으로"><i data-icon="house"></i><span class="label">처음 화면</span></a>
     <h1 id="title">주문 입력</h1>
     <span id="conn" class="conn">연결 중…</span>
   </header>
@@ -312,6 +313,9 @@
     $('confirm-send').addEventListener('click', sendOrder);
     $('note').addEventListener('input', () => { pendingRequestId = null; });
     $('done-next').addEventListener('click', resetOrder);
+
+    Kiosk.setLeaveGuard(() =>
+      Object.keys(cart).length ? '담고 있던 주문이 사라집니다. 처음 화면으로 갈까요?' : null);
 
     Kiosk.connect((s) => {
       state = s;
