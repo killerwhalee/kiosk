@@ -4,13 +4,46 @@
 const Kiosk = (() => {
   const STATUS_LABEL = { pending: '대기', requested: '주방 요청', served: '서빙 완료' };
 
-  function setConn(ok) {
+  const PING_INTERVAL_MS = 5000;
+  const SLOW_MS = 300;        // 이 이상이면 노란색으로 표시
+  let connected = false;
+  let latency = null;         // 최근 왕복 지연 시간(ms)
+
+  function renderConn() {
     const el = document.getElementById('conn');
     if (!el) return;
-    el.classList.toggle('ok', ok);
-    el.classList.toggle('bad', !ok);
-    el.textContent = ok ? '연결됨' : '연결 끊김 — 재연결 중';
+    const slow = connected && latency != null && latency >= SLOW_MS;
+    el.classList.toggle('ok', connected && !slow);
+    el.classList.toggle('slow', slow);
+    el.classList.toggle('bad', !connected);
+    el.textContent = !connected
+      ? '연결 끊김 — 재연결 중'
+      : latency == null ? '연결됨' : `연결됨 · ${latency}ms`;
   }
+
+  function setConn(ok) {
+    if (!ok) latency = null;
+    if (ok !== connected) {
+      connected = ok;
+      if (ok) ping();
+    }
+    renderConn();
+  }
+
+  /** 서버까지 왕복 시간을 잰다. */
+  async function ping() {
+    if (!connected) return;
+    const t0 = performance.now();
+    try {
+      const res = await fetch('/api/ping', { cache: 'no-store' });
+      if (!res.ok) throw new Error();
+      latency = Math.round(performance.now() - t0);
+    } catch {
+      latency = null;
+    }
+    renderConn();
+  }
+  setInterval(ping, PING_INTERVAL_MS);
 
   /** 서버에서 전체 상태를 실시간으로 받는다. 끊기면 자동으로 다시 연결하고 최신 상태를 새로 받는다. */
   function connect(onState) {

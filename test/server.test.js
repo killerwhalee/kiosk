@@ -60,6 +60,7 @@ test('페이지를 제공한다', async () => {
       assert.strictEqual(res.status, 200, p);
     }
     assert.strictEqual((await fetch(base + '/../server.js')).status, 404);
+    assert.strictEqual((await fetch(base + '/api/ping')).status, 204);
   } finally {
     server.close();
   }

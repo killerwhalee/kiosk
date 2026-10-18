@@ -102,6 +102,10 @@ function createServer({ config, store, adminPin = '' }) {
     let m;
 
     if (method === 'GET' && pathname === '/api/events') return openEventStream(req, res);
+    if (method === 'GET' && pathname === '/api/ping') {
+      res.writeHead(204, { 'Cache-Control': 'no-store' });
+      return res.end();
+    }
     if (method === 'GET' && pathname === '/api/state') return sendJson(res, 200, store.snapshot());
 
     if (method !== 'POST') throw new HttpError(404, '없는 API입니다.');

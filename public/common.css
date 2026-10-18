@@ -67,6 +67,7 @@ button:active:not(:disabled) { transform: scale(0.97); }
 .topbar .btn { padding: 8px 14px; font-size: 0.95rem; }
 
 .conn {
+  font-variant-numeric: tabular-nums;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -78,6 +79,7 @@ button:active:not(:disabled) { transform: scale(0.97); }
 }
 .conn::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: #9ca3af; }
 .conn.ok::before { background: #22c55e; }
+.conn.slow::before { background: #facc15; }
 .conn.bad { background: var(--danger); color: #fff; }
 .conn.bad::before { background: #fff; animation: blink 1s infinite; }
 
