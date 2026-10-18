@@ -104,5 +104,22 @@ const Kiosk = (() => {
     return true;
   }
 
-  return { STATUS_LABEL, connect, api, toast, won, time, elapsed, elapsedMinutes, esc, requestId, keepAwake };
+  /** Lucide 아이콘을 인라인 SVG 문자열로 돌려준다. (public/icons.js 필요) */
+  function icon(name, className = '') {
+    const body = (window.LUCIDE_ICONS || {})[name];
+    if (!body) return '';
+    return `<svg class="icon ${className}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+  }
+
+  /** HTML 에 적어 둔 <i data-icon="이름"></i> 을 아이콘으로 바꾼다. */
+  function renderIcons(root = document) {
+    for (const el of root.querySelectorAll('i[data-icon]')) {
+      el.outerHTML = icon(el.dataset.icon, el.className);
+    }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => renderIcons());
+  else renderIcons();
+
+  return { STATUS_LABEL, icon, renderIcons, connect, api, toast, won, time, elapsed, elapsedMinutes, esc, requestId, keepAwake };
 })();

@@ -22,7 +22,7 @@
     .menu-row .name { font-weight: 800; font-size: 1.2rem; }
 
     .links { display: flex; flex-wrap: wrap; gap: 10px; }
-    .links a { padding: 10px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); color: var(--text); text-decoration: none; font-weight: 700; }
+    .links a { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); color: var(--text); text-decoration: none; font-weight: 700; }
 
     .table-wrap { overflow-x: auto; }
     table.orders { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--radius); overflow: hidden; }
@@ -85,7 +85,7 @@
       <div class="card danger-zone">
         <h2>전체 초기화</h2>
         <p class="muted">리허설 후 당일 시작 전에 사용하세요. 모든 주문과 품절 표시가 지워집니다. (기존 데이터는 data 폴더에 백업 파일로 남습니다)</p>
-        <button class="btn btn-danger" id="reset">전체 주문 초기화</button>
+        <button class="btn btn-danger" id="reset"><i data-icon="trash-2"></i>전체 주문 초기화</button>
       </div>
     </section>
   </main>
@@ -98,6 +98,7 @@
     </div>
   </div>
 
+  <script src="/icons.js"></script>
   <script src="/common.js"></script>
   <script>
     'use strict';
@@ -172,7 +173,7 @@
               <div class="muted">${won(m.price)} · ${esc(station ? station.name : '')}</div>
             </div>
             <button class="btn ${m.soldOut ? 'btn-danger' : ''}" data-soldout="${esc(m.id)}" data-value="${m.soldOut ? 'false' : 'true'}">
-              ${m.soldOut ? '품절 해제' : '품절 처리'}
+              ${m.soldOut ? `${Kiosk.icon('rotate-ccw')}품절 해제` : `${Kiosk.icon('ban')}품절 처리`}
             </button>
           </div>`;
       }).join('');
@@ -180,9 +181,9 @@
 
     function renderLinks() {
       $('links').innerHTML = [
-        { href: '/order', label: '🧾 주문 입력' },
-        ...state.stations.map((s) => ({ href: `/station/${s.id}`, label: `🍳 ${s.name}` })),
-      ].map((l) => `<a href="${l.href}" target="_blank">${esc(l.label)}</a>`).join('');
+        { href: '/order', icon: 'clipboard-list', label: '주문 입력' },
+        ...state.stations.map((s) => ({ href: `/station/${s.id}`, icon: 'chef-hat', label: s.name })),
+      ].map((l) => `<a href="${l.href}" target="_blank">${Kiosk.icon(l.icon)}${esc(l.label)}${Kiosk.icon('external-link', 'muted')}</a>`).join('');
     }
 
     function renderOrders() {
@@ -206,12 +207,12 @@
             <td>${o.id}</td>
             <td>${Kiosk.time(o.createdAt)}</td>
             <td><b>${o.tableNo}번</b></td>
-            <td class="items">${items}${o.note ? `<div class="muted">📝 ${esc(o.note)}</div>` : ''}</td>
+            <td class="items">${items}${o.note ? `<div class="muted">${Kiosk.icon('sticky-note')} ${esc(o.note)}</div>` : ''}</td>
             <td>${won(o.total)}</td>
             <td>${statuses}</td>
             <td>${o.cancelled
-              ? `<button class="btn" data-cancel="${o.id}" data-value="false">취소 철회</button>`
-              : `<button class="btn btn-ghost" data-cancel="${o.id}" data-value="true">주문 취소</button>`}</td>
+              ? `<button class="btn" data-cancel="${o.id}" data-value="false">${Kiosk.icon('rotate-ccw')}취소 철회</button>`
+              : `<button class="btn btn-ghost" data-cancel="${o.id}" data-value="true">${Kiosk.icon('circle-x')}주문 취소</button>`}</td>
           </tr>`;
       }).join('');
     }

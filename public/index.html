@@ -20,6 +20,8 @@
       font-size: 1.5rem;
       font-weight: 800;
     }
+    .links a { display: flex; align-items: center; gap: 18px; }
+    .links a .icon { width: 2.2rem; height: 2.2rem; color: var(--primary); }
     .links a small { display: block; margin-top: 4px; font-size: 1rem; font-weight: 500; color: var(--muted); }
   </style>
 </head>
@@ -32,6 +34,7 @@
     <p>이 기기에서 사용할 화면을 고르세요.</p>
     <div class="links" id="links"></div>
   </main>
+  <script src="/icons.js"></script>
   <script src="/common.js"></script>
   <script>
     'use strict';
@@ -40,15 +43,15 @@
       document.getElementById('title').textContent = s.title;
       const station = (st) => {
         const menus = s.menus.filter((m) => m.station === st.id).map((m) => m.name).join(', ');
-        return { href: `/station/${st.id}`, label: `🍳 ${st.name}`, desc: `${menus} 담당 서빙 직원용` };
+        return { href: `/station/${st.id}`, icon: 'chef-hat', label: st.name, desc: `${menus} 담당 서빙 직원용` };
       };
       const links = [
-        { href: '/order', label: '🧾 주문 입력', desc: '주문받는 직원용 태블릿' },
+        { href: '/order', icon: 'clipboard-list', label: '주문 입력', desc: '주문받는 직원용 태블릿' },
         ...s.stations.map(station),
-        { href: '/admin', label: '⚙️ 관리자', desc: '품절 처리, 주문 취소, 매출 현황' },
+        { href: '/admin', icon: 'settings', label: '관리자', desc: '품절 처리, 주문 취소, 매출 현황' },
       ];
       document.getElementById('links').innerHTML = links
-        .map((l) => `<a href="${l.href}">${Kiosk.esc(l.label)}<small>${Kiosk.esc(l.desc)}</small></a>`)
+        .map((l) => `<a href="${l.href}">${Kiosk.icon(l.icon)}<span>${Kiosk.esc(l.label)}<small>${Kiosk.esc(l.desc)}</small></span></a>`)
         .join('');
     });
   </script>

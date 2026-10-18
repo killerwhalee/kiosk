@@ -19,6 +19,9 @@
     .sum-box { padding: 16px; border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
     .sum-box h3 { margin: 0 0 6px; font-size: 1rem; }
     .sum-box.pending h3 { color: var(--pending); }
+    .sum-box.pending.ringing { animation: ring 1.2s ease-in-out infinite; }
+    @keyframes ring { 50% { box-shadow: 0 0 0 6px var(--pending); } }
+    .sum-box h3 .icon { vertical-align: -0.15em; }
     .sum-box.requested h3 { color: var(--requested); }
     .sum-box .qty { font-size: 2.2rem; font-weight: 800; line-height: 1.25; }
     .sum-box .qty .zero { color: var(--line); }
@@ -43,11 +46,8 @@
       border-radius: 18px;
       background: var(--surface);
       box-shadow: var(--shadow);
-      border-left: 10px solid var(--line);
     }
-    .ticket.pending { border-left-color: var(--pending); }
-    .ticket.requested { border-left-color: var(--requested); }
-    .ticket.served { border-left-color: var(--served); opacity: 0.75; }
+    .ticket.served { opacity: 0.75; }
     .ticket.late .elapsed { color: var(--danger); font-weight: 800; }
     .ticket.fresh { animation: flash 1s ease-in-out 3; }
     @keyframes flash { 50% { background: #fff3b0; } }
@@ -56,8 +56,9 @@
     .ticket .tno { font-size: 2.6rem; font-weight: 900; line-height: 1; }
     .ticket .tno small { font-size: 1.1rem; font-weight: 700; }
     .ticket .meta { margin-left: auto; text-align: right; font-size: 0.9rem; color: var(--muted); }
+    .ticket .meta .icon { width: 1em; height: 1em; vertical-align: -0.12em; }
     .ticket .items { font-size: 1.6rem; font-weight: 800; }
-    .ticket .note { padding: 8px 10px; border-radius: 10px; background: #fff7d6; font-weight: 600; }
+    .ticket .note { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 10px; background: #fff7d6; font-weight: 600; }
     .ticket .buttons { display: flex; gap: 8px; }
     .ticket .buttons .btn { flex: 1; padding: 16px 10px; font-size: 1.15rem; }
     .ticket .buttons .btn-ghost { flex: 0 0 auto; }
@@ -105,19 +106,19 @@
 <body>
   <header class="topbar">
     <h1 id="title">주방</h1>
-    <button class="btn" id="sound-toggle">🔔 알림음 켜짐</button>
+    <button class="btn" id="sound-toggle"></button>
     <span id="conn" class="conn">연결 중…</span>
   </header>
 
   <main>
     <div class="summary">
       <div class="sum-box pending">
-        <h3>대기 중 — 주방에 요청할 수량</h3>
+        <h3><i data-icon="bell"></i> 대기 중 — 주방에 요청할 수량</h3>
         <div class="qty" id="sum-pending"></div>
-        <button class="btn btn-requested" id="request-all">모두 주방에 요청</button>
+        <button class="btn btn-requested" id="request-all"><i data-icon="send"></i><span>모두 주방에 요청</span></button>
       </div>
       <div class="sum-box requested">
-        <h3>주방 요청됨 — 조리 중</h3>
+        <h3><i data-icon="chef-hat"></i> 주방 요청됨 — 조리 중</h3>
         <div class="qty" id="sum-requested"></div>
       </div>
     </div>
@@ -136,10 +137,11 @@
 
   <div class="start" id="start">
     <h2 id="start-title">주방 화면</h2>
-    <p>화면을 눌러 시작하세요.<br>새 주문이 들어오면 알림음이 울립니다.</p>
-    <button class="btn btn-primary" id="start-btn">시작하기</button>
+    <p>화면을 눌러 시작하세요.<br>대기 중인 주문을 주방에 요청할 때까지 알림음이 계속 울립니다.</p>
+    <button class="btn btn-primary" id="start-btn"><i data-icon="play"></i>시작하기</button>
   </div>
 
+  <script src="/icons.js"></script>
   <script src="/common.js"></script>
   <script>
     'use strict';
@@ -148,6 +150,7 @@
     const stationId = Number(location.pathname.split('/').pop());
     const LATE_MINUTES = 10;
     const SERVED_SHOWN = 20;
+    const ALARM_INTERVAL_MS = 3000;  // 대기 주문이 남아 있으면 이 간격으로 알림음을 반복
 
     let state = null;
     let seen = null;          // 이미 화면에 표시한 티켓 키
@@ -159,26 +162,68 @@
     let soundOn = storage.get('kiosk-sound') !== 'off';
     let audioCtx = null;
 
-    function beep() {
-      if (!soundOn || !audioCtx) return;
-      const t0 = audioCtx.currentTime;
-      [880, 1175, 880, 1175].forEach((freq, i) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.0001, t0 + i * 0.18);
-        gain.gain.exponentialRampToValueAtTime(0.5, t0 + i * 0.18 + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.18 + 0.16);
-        osc.connect(gain).connect(audioCtx.destination);
-        osc.start(t0 + i * 0.18);
-        osc.stop(t0 + i * 0.18 + 0.17);
-      });
+    let output = null;        // 컴프레서를 거친 최종 출력 (작은 스피커에서도 크게 들리도록)
+
+    function setupAudio() {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      audioCtx = new Ctx();
+      audioCtx.resume();
+      const compressor = audioCtx.createDynamicsCompressor();
+      compressor.threshold.value = -24;
+      compressor.knee.value = 6;
+      compressor.ratio.value = 12;
+      compressor.attack.value = 0.002;
+      compressor.release.value = 0.1;
+      const master = audioCtx.createGain();
+      master.gain.value = 2.5;
+      compressor.connect(master).connect(audioCtx.destination);
+      output = compressor;
     }
 
-    function alertNew() {
-      beep();
+    /** 사람 귀에 잘 들리는 높은 음역(1.3~2kHz)의 짧은 차임. 사각파를 섞어 소리가 또렷하다. */
+    function beep() {
+      if (!soundOn || !audioCtx || !output) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const t0 = audioCtx.currentTime + 0.01;
+      [1319, 1760, 1319, 1760, 2093].forEach((freq, i) => {
+        const start = t0 + i * 0.16;
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(1, start + 0.01);
+        gain.gain.setValueAtTime(1, start + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.15);
+        gain.connect(output);
+        for (const [type, level] of [['square', 0.5], ['sine', 1]]) {
+          const osc = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          osc.type = type;
+          osc.frequency.value = freq;
+          g.gain.value = level;
+          osc.connect(g).connect(gain);
+          osc.start(start);
+          osc.stop(start + 0.16);
+        }
+      });
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    }
+
+    function pendingCount() {
+      return state ? myTickets().filter((e) => e.ticket.status === 'pending').length : 0;
+    }
+
+    // 주방 요청을 누를 때까지(대기 주문이 0건이 될 때까지) 알림음을 반복한다.
+    let lastBeep = 0;
+    setInterval(() => {
+      if (pendingCount() > 0 && Date.now() - lastBeep >= ALARM_INTERVAL_MS - 100) {
+        lastBeep = Date.now();
+        beep();
+      }
+    }, 500);
+
+    function alertNew() {
+      lastBeep = Date.now();
+      beep();
       document.body.classList.remove('alert-flash');
       void document.body.offsetWidth;
       document.body.classList.add('alert-flash');
@@ -186,7 +231,9 @@
     }
 
     function renderSoundToggle() {
-      $('sound-toggle').innerHTML = soundOn ? '🔔<span class="label"> 알림음 켜짐</span>' : '🔕<span class="label"> 알림음 꺼짐</span>';
+      $('sound-toggle').innerHTML = soundOn
+        ? `${Kiosk.icon('bell')}<span class="label">알림음 켜짐</span>`
+        : `${Kiosk.icon('bell-off')}<span class="label">알림음 꺼짐</span>`;
     }
 
     /** 이 주방에 해당하는 티켓 목록 (취소된 주문 제외) */
@@ -226,21 +273,21 @@
       const since = ticket.status === 'requested' ? ticket.requestedAt : ticket.status === 'served' ? ticket.servedAt : order.createdAt;
       const late = ticket.status !== 'served' && Kiosk.elapsedMinutes(order.createdAt) >= LATE_MINUTES;
       const items = ticket.items.map((it) => `<div>${esc(it.name)} × ${it.qty}</div>`).join('');
-      const note = order.note ? `<div class="note">📝 ${esc(order.note)}</div>` : '';
+      const note = order.note ? `<div class="note">${Kiosk.icon('sticky-note')}${esc(order.note)}</div>` : '';
       let buttons = '';
       if (ticket.status === 'pending') {
-        buttons = `<button class="btn btn-requested" data-key="${key}" data-status="requested">주방 요청</button>`;
+        buttons = `<button class="btn btn-requested" data-key="${key}" data-status="requested">${Kiosk.icon('send')}주방 요청</button>`;
       } else if (ticket.status === 'requested') {
-        buttons = `<button class="btn btn-ghost" data-key="${key}" data-status="pending" title="대기로 되돌리기">↩︎</button>
-                   <button class="btn btn-served" data-key="${key}" data-status="served">서빙 완료</button>`;
+        buttons = `<button class="btn btn-ghost" data-key="${key}" data-status="pending" title="대기로 되돌리기" aria-label="대기로 되돌리기">${Kiosk.icon('undo-2')}</button>
+                   <button class="btn btn-served" data-key="${key}" data-status="served">${Kiosk.icon('hand-platter')}서빙 완료</button>`;
       } else {
-        buttons = `<button class="btn btn-ghost" data-key="${key}" data-status="requested">↩︎ 서빙 완료 취소</button>`;
+        buttons = `<button class="btn btn-ghost" data-key="${key}" data-status="requested">${Kiosk.icon('undo-2')}서빙 완료 취소</button>`;
       }
       return `
         <div class="ticket ${ticket.status} ${late ? 'late' : ''} ${fresh.has(key) ? 'fresh' : ''}">
           <div class="head">
             <div class="tno">${order.tableNo}<small>번 테이블</small></div>
-            <div class="meta">주문 #${order.id}<br><span class="elapsed">${Kiosk.time(order.createdAt)} · ${Kiosk.elapsed(order.createdAt)}</span></div>
+            <div class="meta">주문 #${order.id}<br><span class="elapsed">${Kiosk.icon('clock')} ${Kiosk.time(order.createdAt)} · ${Kiosk.elapsed(order.createdAt)}</span></div>
           </div>
           <div class="items">${items}</div>
           ${note}
@@ -275,7 +322,8 @@
       renderSum($('sum-requested'), requested);
       const pendingQty = [...sumByMenu(pending).values()].reduce((a, b) => a + b, 0);
       $('request-all').disabled = pendingQty === 0;
-      $('request-all').textContent = pendingQty ? `대기 ${pending.length}건 모두 주방에 요청` : '대기 중인 주문 없음';
+      $('request-all').querySelector('span').textContent = pendingQty ? `대기 ${pending.length}건 모두 주방에 요청` : '대기 중인 주문 없음';
+      document.querySelector('.sum-box.pending').classList.toggle('ringing', pending.length > 0);
 
       $('count-pending').textContent = `${pending.length}건`;
       $('count-requested').textContent = `${requested.length}건`;
@@ -336,11 +384,8 @@
     });
 
     $('start-btn').addEventListener('click', () => {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (Ctx) {
-        audioCtx = new Ctx();
-        audioCtx.resume();
-      }
+      setupAudio();
+      lastBeep = Date.now();
       beep();
       Kiosk.keepAwake();
       $('start').hidden = true;

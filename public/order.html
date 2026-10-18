@@ -49,7 +49,8 @@
     .menu .name { font-size: 1.8rem; font-weight: 800; }
     .menu .price { margin-top: 4px; color: var(--muted); font-size: 1.1rem; }
     .stepper { display: flex; align-items: center; gap: 10px; }
-    .stepper button { width: 68px; height: 68px; font-size: 2.2rem; font-weight: 700; background: var(--line); }
+    .stepper button { display: inline-flex; align-items: center; justify-content: center; width: 68px; height: 68px; background: var(--line); }
+    .stepper button .icon { width: 30px; height: 30px; stroke-width: 2.5; }
     .stepper button.plus { background: var(--primary); color: #fff; }
     .stepper .qty { min-width: 2ch; text-align: center; font-size: 2.2rem; font-weight: 800; }
     .note { margin-top: 18px; }
@@ -86,7 +87,7 @@
     .lines tr.total td { border-bottom: none; font-weight: 800; font-size: 1.5rem; padding-top: 16px; }
     .confirm-table { font-size: 2.2rem; font-weight: 800; margin-bottom: 12px; color: var(--primary); }
     .done { text-align: center; padding: 40px 0; }
-    .done .check { font-size: 5rem; }
+    .done .check .icon { width: 6rem; height: 6rem; color: var(--served); }
     .done h2 { font-size: 2.2rem; }
     .done .btn { margin-top: 20px; padding: 18px 40px; font-size: 1.2rem; }
 
@@ -109,14 +110,14 @@
     <section id="step-menu" hidden>
       <div class="table-head">
         <div class="tno" id="current-table"></div>
-        <button class="btn btn-ghost" id="change-table">테이블 변경</button>
+        <button class="btn btn-ghost" id="change-table"><i data-icon="arrow-left-right"></i>테이블 변경</button>
       </div>
       <div class="menus" id="menus"></div>
       <div class="note"><input id="note" maxlength="100" placeholder="요청사항 (선택)"></div>
     </section>
 
     <section id="step-done" class="done" hidden>
-      <div class="check">✅</div>
+      <div class="check"><i data-icon="circle-check-big"></i></div>
       <h2 id="done-title"></h2>
       <p class="muted" id="done-desc"></p>
       <button class="btn btn-primary" id="done-next">새 주문</button>
@@ -128,7 +129,7 @@
       <div class="count" id="cart-count"></div>
       <div class="total" id="cart-total"></div>
     </div>
-    <button class="btn btn-primary" id="review" disabled>주문 확인</button>
+    <button class="btn btn-primary" id="review" disabled><i data-icon="shopping-cart"></i>주문 확인</button>
   </footer>
 
   <div class="overlay" id="confirm" hidden>
@@ -138,11 +139,12 @@
       <p class="muted" id="confirm-note"></p>
       <div class="actions">
         <button class="btn" id="confirm-cancel">수정</button>
-        <button class="btn btn-primary" id="confirm-send">주문 전송</button>
+        <button class="btn btn-primary" id="confirm-send"><i data-icon="send"></i><span>주문 전송</span></button>
       </div>
     </div>
   </div>
 
+  <script src="/icons.js"></script>
   <script src="/common.js"></script>
   <script>
     'use strict';
@@ -213,9 +215,9 @@
               <div class="price">${m.soldOut ? '품절' : won(m.price)}</div>
             </div>
             <div class="stepper">
-              <button data-menu="${esc(m.id)}" data-delta="-1" ${qty === 0 ? 'disabled' : ''} aria-label="빼기">−</button>
+              <button data-menu="${esc(m.id)}" data-delta="-1" ${qty === 0 ? 'disabled' : ''} aria-label="빼기">${Kiosk.icon('minus')}</button>
               <span class="qty">${qty}</span>
-              <button class="plus" data-menu="${esc(m.id)}" data-delta="1" ${m.soldOut ? 'disabled' : ''} aria-label="더하기">+</button>
+              <button class="plus" data-menu="${esc(m.id)}" data-delta="1" ${m.soldOut ? 'disabled' : ''} aria-label="더하기">${Kiosk.icon('plus')}</button>
             </div>
           </div>`;
       }).join('');
@@ -246,7 +248,7 @@
         lines.map((l) => `<tr><td>${esc(l.menu.name)} × ${l.qty}</td><td>${won(l.qty * l.menu.price)}</td></tr>`).join('') +
         `<tr class="total"><td>합계</td><td>${won(total)}</td></tr>`;
       const note = $('note').value.trim();
-      $('confirm-note').textContent = note ? `요청사항: ${note}` : '';
+      $('confirm-note').innerHTML = note ? `${Kiosk.icon('sticky-note')} 요청사항: ${esc(note)}` : '';
       if (!pendingRequestId) pendingRequestId = Kiosk.requestId();
       $('confirm').hidden = false;
     }
@@ -255,7 +257,7 @@
       if (sending) return;
       sending = true;
       $('confirm-send').disabled = true;
-      $('confirm-send').textContent = '전송 중…';
+      $('confirm-send').querySelector('span').textContent = '전송 중…';
       try {
         const order = await Kiosk.api('/api/orders', {
           tableNo: table,
@@ -279,7 +281,7 @@
       } finally {
         sending = false;
         $('confirm-send').disabled = false;
-        $('confirm-send').textContent = '주문 전송';
+        $('confirm-send').querySelector('span').textContent = '주문 전송';
       }
     }
 

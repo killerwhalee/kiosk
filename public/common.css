@@ -37,6 +37,9 @@ button {
   user-select: none;
   -webkit-user-select: none;
 }
+.icon { width: 1.15em; height: 1.15em; flex-shrink: 0; vertical-align: -0.2em; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4em; }
+
 button:disabled { opacity: 0.4; cursor: not-allowed; }
 button:active:not(:disabled) { transform: scale(0.97); }
 
