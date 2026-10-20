@@ -1,13 +1,16 @@
 {
-  "title": "후원자 일일 찻집",
+  "title": "우리 가게",
   "port": 3000,
-  "tables": 11,
+  "tables": 8,
   "stations": [
-    { "id": 1, "name": "1번 주방" },
-    { "id": 2, "name": "2번 주방" }
+    { "id": 1, "name": "음료" },
+    { "id": 2, "name": "주방" }
   ],
   "menus": [
-    { "id": "bulgogi", "name": "불고기", "price": 10000, "station": 1 },
-    { "id": "lasagna", "name": "라자냐", "price": 10000, "station": 2 }
+    { "id": "americano", "name": "아메리카노", "price": 3000, "station": 1 },
+    { "id": "latte", "name": "카페라테", "price": 3500, "station": 1 },
+    { "id": "lemonade", "name": "레몬에이드", "price": 4000, "station": 1 },
+    { "id": "sandwich", "name": "샌드위치", "price": 5500, "station": 2 },
+    { "id": "cheesecake", "name": "치즈케이크", "price": 5000, "station": 2 }
   ]
 }

@@ -71,13 +71,13 @@ npm start
 다음과 같이 출력되면 시작된 것입니다.
 
 ```
-후원자 일일 찻집 주문 시스템이 시작되었습니다.
+우리 가게 주문 시스템이 시작되었습니다.
   이 컴퓨터에서: http://localhost:3000
   wlan0        http://192.168.0.12:3000
 
   주문 입력:   /order
-  1번 주방   : /station/1
-  2번 주방   : /station/2
+  음료      : /station/1
+  주방      : /station/2
   관리자:      /admin
   저장 파일:   /home/me/kiosk/data/state.json
 ```
@@ -148,21 +148,23 @@ HTTPS를 쓰든 안 쓰든, 각 태블릿의 **화면 자동 꺼짐은 "안 함"
 
 ### config.json
 
-프로그램 폴더의 `config.json`을 메모장 같은 텍스트 편집기로 엽니다. 저장소에 들어 있는 파일은 예시이므로 내용을 자유롭게 바꾸면 됩니다.
+프로그램 폴더의 `config.json`을 메모장 같은 텍스트 편집기로 엽니다. 저장소에 들어 있는 파일은 음료 코너와 주방이 있는 작은 카페를 예로 든 것이므로, 내 가게에 맞게 자유롭게 바꾸면 됩니다.
 
 ```json
 {
-  "title": "우리 동네 카페",
+  "title": "우리 가게",
   "port": 3000,
   "tables": 8,
   "stations": [
     { "id": 1, "name": "음료" },
-    { "id": 2, "name": "디저트" }
+    { "id": 2, "name": "주방" }
   ],
   "menus": [
     { "id": "americano", "name": "아메리카노", "price": 3000, "station": 1 },
     { "id": "latte", "name": "카페라테", "price": 3500, "station": 1 },
-    { "id": "cake", "name": "치즈케이크", "price": 5000, "station": 2 }
+    { "id": "lemonade", "name": "레몬에이드", "price": 4000, "station": 1 },
+    { "id": "sandwich", "name": "샌드위치", "price": 5500, "station": 2 },
+    { "id": "cheesecake", "name": "치즈케이크", "price": 5000, "station": 2 }
   ]
 }
 ```

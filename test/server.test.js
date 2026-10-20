@@ -7,7 +7,7 @@ const path = require('path');
 const { createServer, loadConfig } = require('../server');
 const { Store } = require('../lib/store');
 
-const config = loadConfig(path.join(__dirname, '..', 'config.json'));
+const config = loadConfig(path.join(__dirname, 'fixtures', 'config.json'));
 
 async function start(adminPin = '') {
   const store = new Store(config, null);

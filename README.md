@@ -32,7 +32,7 @@ Git이 없다면 GitHub 저장소 페이지에서 **Code → Download ZIP**으�
 실행하면 접속 주소가 출력됩니다. 같은 와이파이에 연결된 태블릿에서 그 주소를 열면 됩니다.
 
 ```
-후원자 일일 찻집 주문 시스템이 시작되었습니다.
+우리 가게 주문 시스템이 시작되었습니다.
   이 컴퓨터에서: http://localhost:3000
   wlan0        http://192.168.0.12:3000
 ```
@@ -46,20 +46,22 @@ Git이 없다면 GitHub 저장소 페이지에서 **Code → Download ZIP**으�
 
 ## 내 가게에 맞게 바꾸기
 
-`config.json`을 열어 수정하고 서버를 다시 시작합니다. 저장소에 들어 있는 `config.json`은 예시입니다.
+`config.json`을 열어 수정하고 서버를 다시 시작합니다. 저장소에는 음료 코너와 주방이 있는 작은 카페를 예로 든 `config.json`이 들어 있습니다.
 
 ```json
 {
-  "title": "우리 동네 카페",
+  "title": "우리 가게",
   "tables": 8,
   "stations": [
     { "id": 1, "name": "음료" },
-    { "id": 2, "name": "디저트" }
+    { "id": 2, "name": "주방" }
   ],
   "menus": [
     { "id": "americano", "name": "아메리카노", "price": 3000, "station": 1 },
     { "id": "latte", "name": "카페라테", "price": 3500, "station": 1 },
-    { "id": "cake", "name": "치즈케이크", "price": 5000, "station": 2 }
+    { "id": "lemonade", "name": "레몬에이드", "price": 4000, "station": 1 },
+    { "id": "sandwich", "name": "샌드위치", "price": 5500, "station": 2 },
+    { "id": "cheesecake", "name": "치즈케이크", "price": 5000, "station": 2 }
   ]
 }
 ```
@@ -121,4 +123,4 @@ npm test     # 테스트 실행
 - `public/icons.js`: 화면에서 쓰는 [Lucide](https://lucide.dev) 아이콘만 모은 파일입니다. 인터넷 없이도 아이콘이 보이도록 저장소에 포함했습니다.
   아이콘을 추가하려면 `scripts/build-icons.js`의 목록에 이름을 넣고 `npm install && npm run build:icons`를 실행합니다.
   서버 실행에는 `npm install`이 필요 없습니다.
-- 테스트는 저장소의 `config.json`을 사용합니다. `config.json`을 바꾼 뒤 테스트가 실패하면 테스트 안의 메뉴 `id`를 맞춰 주세요.
+- 테스트는 `config.json` 대신 `test/fixtures/config.json`을 사용하므로, `config.json`을 자유롭게 바꿔도 테스트에 영향이 없습니다.

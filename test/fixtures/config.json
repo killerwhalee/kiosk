@@ -1,0 +1,12 @@
+{
+  "title": "테스트 가게",
+  "tables": 11,
+  "stations": [
+    { "id": 1, "name": "1번 주방" },
+    { "id": 2, "name": "2번 주방" }
+  ],
+  "menus": [
+    { "id": "bulgogi", "name": "불고기", "price": 10000, "station": 1 },
+    { "id": "lasagna", "name": "라자냐", "price": 10000, "station": 2 }
+  ]
+}

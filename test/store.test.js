@@ -7,7 +7,7 @@ const os = require('os');
 const path = require('path');
 const { Store } = require('../lib/store');
 
-const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config.json'), 'utf8'));
+const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'config.json'), 'utf8'));
 
 function tmpFile() {
   return path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'kiosk-')), 'state.json');
