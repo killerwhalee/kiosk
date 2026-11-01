@@ -7,22 +7,27 @@
   <link rel="stylesheet" href="/common.css">
   <style>
     main { padding: 24px 16px; max-width: 560px; margin: 0 auto; }
-    p { color: var(--muted); }
+    .lead { margin: 0 0 20px; font-size: var(--t-lg); font-weight: 700; }
     .links { display: flex; flex-direction: column; gap: 14px; }
     .links a {
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 18px;
       padding: 24px;
       border-radius: 20px;
       background: var(--surface);
       box-shadow: var(--shadow);
       color: var(--text);
       text-decoration: none;
-      font-size: 1.5rem;
+      font-size: var(--t-xl);
       font-weight: 800;
     }
-    .links a { display: flex; align-items: center; gap: 18px; }
+    .links a:active { transform: scale(0.98); }
     .links a .icon { width: 2.2rem; height: 2.2rem; color: var(--primary); }
-    .links a small { display: block; margin-top: 4px; font-size: 1rem; font-weight: 500; color: var(--muted); }
+    .links a small { display: block; margin-top: 4px; font-size: var(--t-sm); font-weight: 500; color: var(--muted); }
+    /* 관리자는 실수로 누르지 않도록 한 단계 낮춘다. */
+    .links a.minor { margin-top: 18px; padding: 16px 20px; border-radius: var(--radius); background: transparent; box-shadow: none; border: 2px solid var(--line); font-size: var(--t-md); }
+    .links a.minor .icon { width: 1.5rem; height: 1.5rem; color: var(--muted); }
   </style>
 </head>
 <body>
@@ -31,7 +36,7 @@
     <span id="conn" class="conn">연결 중…</span>
   </header>
   <main>
-    <p>이 기기에서 사용할 화면을 고르세요.</p>
+    <p class="lead">이 기기에서 사용할 화면을 고르세요.</p>
     <div class="links" id="links"></div>
   </main>
   <script src="/icons.js"></script>
@@ -48,10 +53,10 @@
       const links = [
         { href: '/order', icon: 'clipboard-list', label: '주문 입력', desc: '주문받는 직원용 태블릿' },
         ...s.stations.map(station),
-        { href: '/admin', icon: 'settings', label: '관리자', desc: '품절 처리, 주문 취소, 매출 현황' },
+        { href: '/admin', icon: 'settings', label: '관리자', desc: '품절 처리, 주문 취소, 매출 현황', minor: true },
       ];
       document.getElementById('links').innerHTML = links
-        .map((l) => `<a href="${l.href}">${Kiosk.icon(l.icon)}<span>${Kiosk.esc(l.label)}<small>${Kiosk.esc(l.desc)}</small></span></a>`)
+        .map((l) => `<a href="${l.href}"${l.minor ? ' class="minor"' : ''}>${Kiosk.icon(l.icon)}<span>${Kiosk.esc(l.label)}<small>${Kiosk.esc(l.desc)}</small></span></a>`)
         .join('');
     });
   </script>

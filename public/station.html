@@ -9,35 +9,32 @@
   <style>
     main { padding: 14px; max-width: 1100px; margin: 0 auto; }
 
-    /* 주방에 요청할 수량 요약 */
-    .summary {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-    .sum-box { padding: 16px; border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
-    .sum-box h3 { margin: 0 0 6px; font-size: 1rem; }
+    /* 주방에 요청할 수량 요약: 한 줄 띠로 줄여 첫 화면에 주문표가 보이게 한다. */
+    .summary { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; margin-bottom: 8px; }
+    .sum-box { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
+    .sum-box h3 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: var(--t-sm); font-weight: 800; }
     .sum-box.pending h3 { color: var(--pending); }
-    .sum-box.pending.ringing { animation: ring 1.2s ease-in-out infinite; }
-    @keyframes ring { 50% { box-shadow: 0 0 0 6px var(--pending); } }
-    .sum-box h3 .icon { vertical-align: -0.15em; }
     .sum-box.requested h3 { color: var(--requested); }
-    .sum-box .qty { font-size: 2.2rem; font-weight: 800; line-height: 1.25; }
-    .sum-box .qty .zero { color: var(--line); }
-    .sum-box .btn { width: 100%; margin-top: 10px; padding: 16px; font-size: 1.15rem; }
+    .sum-box.pending.ringing { box-shadow: 0 0 0 3px var(--pending-edge), var(--shadow); }
+    .sum-box .qty { display: flex; flex-wrap: wrap; gap: 4px 22px; }
+    .sum-box .qty .q { font-size: var(--t-lg); font-weight: 700; }
+    .sum-box .qty .q b { font-size: var(--t-2xl); font-weight: 800; line-height: 1.1; margin-left: 4px; font-variant-numeric: tabular-nums; }
+    .sum-box .qty .q.zero { color: var(--muted); font-weight: 500; }
+    .sum-box .qty .q.zero b { font-weight: 600; }
+    .sum-box .btn { width: 100%; margin-top: auto; padding: 14px; }
 
     .section-title {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       margin: 22px 0 10px;
-      font-size: 1.15rem;
+      font-size: var(--t-md);
     }
-    .section-title .count { color: var(--muted); font-weight: 600; }
-    .empty { padding: 18px; text-align: center; color: var(--muted); background: var(--surface); border-radius: var(--radius); }
+    .section-title .badge { font-size: var(--t-sm); padding: 4px 12px; }
+    .section-title .count { color: var(--muted); font-weight: 700; }
+    .empty { padding: 18px; text-align: center; font-size: var(--t-md); color: var(--muted); background: var(--surface); border-radius: var(--radius); }
 
-    .tickets { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+    .tickets { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
     .ticket {
       display: flex;
       flex-direction: column;
@@ -47,21 +44,25 @@
       background: var(--surface);
       box-shadow: var(--shadow);
     }
-    .ticket.served { opacity: 0.75; }
-    .ticket.late .elapsed { color: var(--danger); font-weight: 800; }
+    .ticket.served { background: var(--served-bg); box-shadow: none; }
+    .ticket.late { box-shadow: 0 0 0 3px var(--danger), var(--shadow); }
     .ticket.fresh { animation: flash 1s ease-in-out 3; }
     @keyframes flash { 50% { background: #fff3b0; } }
 
-    .ticket .head { display: flex; align-items: baseline; gap: 10px; }
-    .ticket .tno { font-size: 2.6rem; font-weight: 900; line-height: 1; }
-    .ticket .tno small { font-size: 1.1rem; font-weight: 700; }
-    .ticket .meta { margin-left: auto; text-align: right; font-size: 0.9rem; color: var(--muted); }
-    .ticket .meta .icon { width: 1em; height: 1em; vertical-align: -0.12em; }
-    .ticket .items { font-size: 1.6rem; font-weight: 800; }
-    .ticket .note { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 10px; background: #fff7d6; font-weight: 600; }
-    .ticket .buttons { display: flex; gap: 8px; }
-    .ticket .buttons .btn { flex: 1; padding: 16px 10px; font-size: 1.15rem; }
-    .ticket .buttons .btn-ghost { flex: 0 0 auto; }
+    .ticket .head { display: flex; align-items: flex-start; gap: 10px; }
+    .ticket .tno { font-size: var(--t-3xl); font-weight: 900; line-height: 1; }
+    .ticket .tno small { font-size: var(--t-md); font-weight: 700; margin-left: 2px; }
+    .ticket .meta { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .ticket .elapsed { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-lg); font-weight: 800; font-variant-numeric: tabular-nums; }
+    .ticket .elapsed .icon { width: 1em; height: 1em; }
+    .ticket.late .elapsed { color: var(--danger); }
+    .ticket .sub { font-size: var(--t-xs); font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .ticket .items { font-size: var(--t-xl); font-weight: 800; line-height: 1.3; }
+    .ticket .note { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 10px; background: #fff0b8; font-size: var(--t-md); font-weight: 700; }
+    .ticket .buttons { display: flex; gap: 12px; }
+    .ticket .buttons .btn { flex: 1; padding: 16px 10px; font-size: var(--t-lg); }
+    .ticket .buttons .btn-ghost { flex: 0 0 auto; padding: 16px 14px; font-size: var(--t-sm); }
+    .ticket .buttons .btn-served { flex: 1; }
 
     details.served-list summary { cursor: pointer; list-style: none; }
     details.served-list summary::-webkit-details-marker { display: none; }
@@ -83,8 +84,10 @@
       color: #fff;
     }
     .start[hidden] { display: none; }
-    .start h2 { margin: 0; font-size: 2.2rem; }
-    .start .btn { padding: 22px 48px; font-size: 1.4rem; }
+    .start h2 { margin: 0; font-size: var(--t-2xl); font-weight: 800; }
+    .start p { margin: 0; font-size: var(--t-lg); font-weight: 600; line-height: 1.5; max-width: 28em; }
+    .start p.sub { font-size: var(--t-md); font-weight: 500; color: #d8d3ca; }
+    .start .btn { margin-top: 10px; padding: 22px 48px; font-size: var(--t-xl); }
 
     body.alert-flash::after {
       content: "";
@@ -92,14 +95,12 @@
       inset: 0;
       z-index: 40;
       pointer-events: none;
-      border: 14px solid var(--pending);
+      border: 14px solid var(--pending-edge);
       animation: blink 0.5s 4;
     }
 
-    @media (max-width: 520px) {
+    @media (max-width: 700px) {
       .summary { grid-template-columns: 1fr; }
-      .sum-box .qty { font-size: 1.8rem; }
-      #sound-toggle .label { display: none; }
     }
   </style>
 </head>
@@ -114,31 +115,32 @@
   <main>
     <div class="summary">
       <div class="sum-box pending">
-        <h3><i data-icon="bell"></i> 대기 중 — 주방에 요청할 수량</h3>
+        <h3><i data-icon="bell"></i>주방에 요청할 수량 (대기)</h3>
         <div class="qty" id="sum-pending"></div>
         <button class="btn btn-requested" id="request-all"><i data-icon="send"></i><span>모두 주방에 요청</span></button>
       </div>
       <div class="sum-box requested">
-        <h3><i data-icon="chef-hat"></i> 주방 요청됨 — 조리 중</h3>
+        <h3><i data-icon="chef-hat"></i>조리 중 (주방 요청됨)</h3>
         <div class="qty" id="sum-requested"></div>
       </div>
     </div>
 
-    <div class="section-title"><span class="badge pending">대기</span><span class="count" id="count-pending"></span></div>
+    <div class="section-title"><span class="badge pending"><i data-icon="clock"></i>대기</span><span class="count" id="count-pending"></span></div>
     <div class="tickets" id="list-pending"></div>
 
-    <div class="section-title"><span class="badge requested">주방 요청</span><span class="count" id="count-requested"></span></div>
+    <div class="section-title"><span class="badge requested"><i data-icon="chef-hat"></i>주방 요청</span><span class="count" id="count-requested"></span></div>
     <div class="tickets" id="list-requested"></div>
 
     <details class="served-list" id="served-details">
-      <summary class="section-title"><span class="badge served">서빙 완료</span><span class="count" id="count-served"></span></summary>
+      <summary class="section-title"><span class="badge served"><i data-icon="circle-check-big"></i>서빙 완료</span><span class="count" id="count-served"></span></summary>
       <div class="tickets" id="list-served"></div>
     </details>
   </main>
 
   <div class="start" id="start">
     <h2 id="start-title">주방 화면</h2>
-    <p>화면을 눌러 시작하세요.<br>대기 중인 주문을 주방에 요청할 때까지 알림음이 계속 울립니다.</p>
+    <p>아래 버튼을 눌러 시작하세요.</p>
+    <p class="sub">대기 중인 주문을 주방에 요청할 때까지 알림음이 계속 울립니다.</p>
     <button class="btn btn-primary" id="start-btn"><i data-icon="play"></i>시작하기</button>
   </div>
 
@@ -266,29 +268,34 @@
       const names = [...new Set([...menuNames(), ...totals.keys()])];
       el.innerHTML = names.map((name) => {
         const n = totals.get(name) || 0;
-        return `<div${n ? '' : ' class="zero"'}>${esc(name)} ${n}개</div>`;
-      }).join('') || '<div class="zero">—</div>';
+        return `<div class="q${n ? '' : ' zero'}">${esc(name)}<b>${n}</b>개</div>`;
+      }).join('') || '<div class="q zero">—</div>';
     }
 
     function ticketHtml({ order, ticket, key }) {
-      const since = ticket.status === 'requested' ? ticket.requestedAt : ticket.status === 'served' ? ticket.servedAt : order.createdAt;
-      const late = ticket.status !== 'served' && Kiosk.elapsedMinutes(order.createdAt) >= LATE_MINUTES;
+      const minutes = Kiosk.elapsedMinutes(order.createdAt);
+      const late = ticket.status !== 'served' && minutes >= LATE_MINUTES;
       const items = ticket.items.map((it) => `<div>${esc(it.name)} × ${it.qty}</div>`).join('');
       const note = order.note ? `<div class="note">${Kiosk.icon('sticky-note')}${esc(order.note)}</div>` : '';
       let buttons = '';
       if (ticket.status === 'pending') {
         buttons = `<button class="btn btn-requested" data-key="${key}" data-status="requested">${Kiosk.icon('send')}주방 요청</button>`;
       } else if (ticket.status === 'requested') {
-        buttons = `<button class="btn btn-ghost" data-key="${key}" data-status="pending" title="대기로 되돌리기" aria-label="대기로 되돌리기">${Kiosk.icon('undo-2')}</button>
-                   <button class="btn btn-served" data-key="${key}" data-status="served">${Kiosk.icon('hand-platter')}서빙 완료</button>`;
+        buttons = `<button class="btn btn-served" data-key="${key}" data-status="served">${Kiosk.icon('hand-platter')}서빙 완료</button>
+                   <button class="btn btn-ghost" data-key="${key}" data-status="pending">${Kiosk.icon('undo-2')}대기로</button>`;
       } else {
         buttons = `<button class="btn btn-ghost" data-key="${key}" data-status="requested">${Kiosk.icon('undo-2')}서빙 완료 취소</button>`;
       }
+      const elapsedText = ticket.status === 'served' ? '' : `${Kiosk.icon('clock')}${Kiosk.elapsed(order.createdAt)}`;
       return `
         <div class="ticket ${ticket.status} ${late ? 'late' : ''} ${fresh.has(key) ? 'fresh' : ''}">
           <div class="head">
             <div class="tno">${order.tableNo}<small>번 테이블</small></div>
-            <div class="meta">주문 #${order.id}<br><span class="elapsed">${Kiosk.icon('clock')} ${Kiosk.time(order.createdAt)} · ${Kiosk.elapsed(order.createdAt)}</span></div>
+            <div class="meta">
+              ${elapsedText ? `<span class="elapsed">${elapsedText}</span>` : ''}
+              ${late ? `<span class="badge late">${LATE_MINUTES}분 넘음</span>` : ''}
+              <span class="sub">주문 #${order.id} · ${Kiosk.time(order.createdAt)}</span>
+            </div>
           </div>
           <div class="items">${items}</div>
           ${note}
@@ -351,10 +358,15 @@
       render();
     }
 
-    async function changeStatus(key, status) {
+    async function changeStatus(key, status, undo = true) {
       const [orderId] = key.split('-');
       try {
         await Kiosk.api(`/api/orders/${orderId}/tickets/${stationId}/status`, { status });
+        if (status === 'served' && undo) {
+          const o = state.orders.find((x) => String(x.id) === orderId);
+          Kiosk.toast(`${o ? `${o.tableNo}번 테이블 ` : ''}서빙 완료로 처리했습니다.`, false,
+            { label: '되돌리기', onClick: () => changeStatus(key, 'requested', false) });
+        }
       } catch (err) {
         Kiosk.toast(err.status ? err.message : '전송 실패 — 연결을 확인해 주세요.', true);
       }
@@ -396,7 +408,7 @@
     setInterval(render, 20000);
 
     Kiosk.setLeaveGuard(() =>
-      '이 화면을 나가면 새 주문 알림을 받을 수 없습니다. 처음 화면으로 갈까요?');
+      '이 화면을 나가면 새 주문 알림을 받을 수 없습니다.');
 
     renderSoundToggle();
     Kiosk.connect(onState);

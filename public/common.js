@@ -3,6 +3,7 @@
 /* 모든 화면이 함께 쓰는 도우미: 실시간 연결, API 호출, 표시 형식 */
 const Kiosk = (() => {
   const STATUS_LABEL = { pending: '대기', requested: '주방 요청', served: '서빙 완료' };
+  const STATUS_ICON = { pending: 'clock', requested: 'chef-hat', served: 'circle-check-big' };
 
   const PING_INTERVAL_MS = 5000;
   const SLOW_MS = 300;        // 이 이상이면 노란색으로 표시
@@ -82,19 +83,68 @@ const Kiosk = (() => {
     return data;
   }
 
+  /** 하단이 아닌 상단에 뜨는 알림. action({label, onClick})을 주면 눌러서 되돌릴 수 있다. */
   let toastTimer;
-  function toast(message, isError = false) {
+  function toast(message, isError = false, action = null) {
     let el = document.querySelector('.toast');
     if (!el) {
       el = document.createElement('div');
       el.className = 'toast';
+      el.setAttribute('role', 'status');
       document.body.appendChild(el);
     }
-    el.textContent = message;
+    el.textContent = '';
+    const text = document.createElement('span');
+    text.textContent = message;
+    el.appendChild(text);
+    if (action) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = action.label;
+      b.addEventListener('click', () => { el.classList.remove('show'); action.onClick(); });
+      el.appendChild(b);
+    }
     el.classList.toggle('error', isError);
+    el.classList.toggle('has-action', !!action);
     el.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), isError ? 4000 : 2500);
+    toastTimer = setTimeout(() => el.classList.remove('show'), action ? 6000 : isError ? 4000 : 2500);
+  }
+
+  /**
+   * 브라우저 기본 confirm/prompt 대신 쓰는 확인 창. 확인하면 true.
+   * requireText 를 주면 그 글자를 똑같이 입력해야 확인할 수 있다.
+   */
+  function confirmDialog({ title, message = '', confirmLabel = '확인', cancelLabel = '취소', danger = false, requireText = '' }) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'overlay';
+      overlay.innerHTML = `
+        <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="cd-title">
+          <h2 id="cd-title">${esc(title)}</h2>
+          ${message ? `<p class="dialog-msg">${esc(message)}</p>` : ''}
+          ${requireText ? `<input class="dialog-input" autocomplete="off" placeholder="“${esc(requireText)}” 입력">` : ''}
+          <div class="actions">
+            <button type="button" class="btn" data-act="no">${esc(cancelLabel)}</button>
+            <button type="button" class="btn ${danger ? 'btn-danger' : 'btn-primary'}" data-act="yes">${esc(confirmLabel)}</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+      const input = overlay.querySelector('input');
+      const yes = overlay.querySelector('[data-act="yes"]');
+      const sync = () => { if (input) yes.disabled = input.value.trim() !== requireText; };
+      sync();
+      const done = (v) => { document.removeEventListener('keydown', onKey); overlay.remove(); resolve(v); };
+      const onKey = (e) => { if (e.key === 'Escape') done(false); if (e.key === 'Enter' && !yes.disabled) done(true); };
+      document.addEventListener('keydown', onKey);
+      if (input) input.addEventListener('input', sync);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) done(false);
+        const act = e.target.closest('[data-act]');
+        if (act) done(act.dataset.act === 'yes');
+      });
+      (input || overlay.querySelector('[data-act="no"]')).focus();
+    });
   }
 
   const won = (n) => `${Number(n).toLocaleString('ko-KR')}원`;
@@ -137,6 +187,11 @@ const Kiosk = (() => {
     return true;
   }
 
+  /** 상태 배지 HTML (색 + 아이콘 + 글자). label 을 주면 글자를 바꾼다. */
+  function badge(status, label) {
+    return `<span class="badge ${status}">${icon(STATUS_ICON[status])}${esc(label || STATUS_LABEL[status])}</span>`;
+  }
+
   /** Lucide 아이콘을 인라인 SVG 문자열로 돌려준다. (public/icons.js 필요) */
   function icon(name, className = '') {
     const body = (window.LUCIDE_ICONS || {})[name];
@@ -166,8 +221,11 @@ const Kiosk = (() => {
     const link = e.target.closest('a.home-btn');
     if (!link || !leaveGuard) return;
     const message = leaveGuard();
-    if (message && !confirm(message)) e.preventDefault();
+    if (!message) return;
+    e.preventDefault();
+    confirmDialog({ title: '처음 화면으로 갈까요?', message, confirmLabel: '이동', cancelLabel: '머무르기' })
+      .then((ok) => { if (ok) location.href = link.href; });
   });
 
-  return { STATUS_LABEL, setLeaveGuard, icon, renderIcons, connect, api, toast, won, time, elapsed, elapsedMinutes, esc, requestId, keepAwake };
+  return { STATUS_LABEL, STATUS_ICON, setLeaveGuard, confirmDialog, badge, icon, renderIcons, connect, api, toast, won, time, elapsed, elapsedMinutes, esc, requestId, keepAwake };
 })();
