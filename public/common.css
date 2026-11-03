@@ -1,25 +1,29 @@
 :root {
-  --bg: #f4f1ec;
+  /* 무채색 바탕·흰 카드·검정 글자. 색은 상태와 위험에만 쓴다. */
+  --bg: #f3f3f3;
   --surface: #ffffff;
-  --text: #1f1d1a;
-  --muted: #6b665e;
-  --line: #e2ddd4;
-  --primary: #b4532a;
-  --primary-dark: #8f3f1e;
+  --surface-2: #f7f7f7;
+  --text: #1a1a1a;
+  --muted: #666666;
+  --line: #e2e2e2;
+  --line-strong: #c4c4c4;
+  --primary: #1a1a1a;
+  --primary-dark: #000000;
   /* 상태 색: 글자·채움 버튼용 진한 색 / 배지·바탕용 옅은 색 / 테두리·점용 밝은 색 */
-  --pending: #b45309;
+  --pending: #a34a08;
   --pending-bg: #fff1d6;
   --pending-edge: #f59e0b;
   --requested: #2563eb;
   --requested-bg: #e8f0ff;
-  --served: #15803d;
+  --served: #126f35;
   --served-bg: #e4f5ea;
   --danger: #c0262d;
   --danger-bg: #fde8e8;
-  --disabled-bg: #e9e5dd;
-  --disabled-text: #8a847a;
-  --radius: 14px;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --disabled-bg: #ececec;
+  --disabled-text: #8c8c8c;
+  --radius: 10px;
+  /* 그림자는 떠 있는 것(다이얼로그·토스트·하단 바)에만. 카드는 테두리로 나눈다. */
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 12px 32px rgba(0, 0, 0, 0.12);
 
   /* 글자 크기 단계 */
   --t-xs: 0.875rem;
@@ -41,11 +45,13 @@ html, body {
   font-weight: 500;
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
-  scrollbar-color: #c9c2b6 transparent;
+  scrollbar-color: var(--line-strong) transparent;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
-::selection { background: #f0c9b4; color: var(--text); }
-input { caret-color: var(--primary); }
-:focus-visible { outline: 3px solid var(--requested); outline-offset: 2px; }
+::selection { background: var(--text); color: #fff; }
+input { caret-color: var(--text); }
+:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
 .num { font-variant-numeric: tabular-nums; }
 
 button {
@@ -66,7 +72,7 @@ button:active:not(:disabled) { transform: scale(0.97); }
 .btn { min-height: 52px; padding: 14px 20px; font-size: var(--t-md); font-weight: 700; background: var(--line); color: var(--text); }
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-primary:active:not(:disabled) { background: var(--primary-dark); }
-.btn-ghost { background: transparent; color: var(--muted); border: 2px solid var(--line); }
+.btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--line-strong); }
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-pending { background: var(--pending); color: #fff; }
 .btn-requested { background: var(--requested); color: #fff; }
@@ -79,9 +85,10 @@ button:active:not(:disabled) { transform: scale(0.97); }
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  background: var(--text);
-  color: #fff;
+  padding: 10px 16px;
+  background: var(--surface);
+  color: var(--text);
+  border-bottom: 1px solid var(--line);
 }
 .topbar h1 { margin: 0; font-size: var(--t-lg); font-weight: 800; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar .btn { min-height: 44px; padding: 8px 14px; font-size: var(--t-sm); }
@@ -93,18 +100,21 @@ button:active:not(:disabled) { transform: scale(0.97); }
   flex-shrink: 0;
   min-height: 44px;
   padding: 8px 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
   font-size: var(--t-sm);
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
 }
-.home-btn:active { background: rgba(255, 255, 255, 0.25); }
+.home-btn:active { background: var(--surface-2); }
 .home-btn .icon { width: 1.3em; height: 1.3em; }
 @media (max-width: 520px) {
   .home-btn .label { display: none; }
+  /* 좁은 화면에서는 연결 상태를 점만 남겨 화면 제목이 잘리지 않게 한다. 끊겼을 때는 글자를 그대로 보인다. */
+  .conn:not(.bad) { gap: 0; padding: 8px; font-size: 0; }
 }
 
 .conn {
@@ -114,14 +124,17 @@ button:active:not(:disabled) { transform: scale(0.97); }
   gap: 6px;
   font-size: var(--t-xs);
   font-weight: 600;
-  padding: 4px 10px;
+  padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
   white-space: nowrap;
 }
-.conn::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: #9ca3af; }
-.conn.ok::before { background: #22c55e; }
-.conn.slow::before { background: #facc15; }
+.conn::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #a3a3a3; }
+.conn.ok::before { background: var(--served); }
+.conn.slow::before { background: var(--pending-edge); }
+.conn.bad { border-color: var(--danger); }
 .conn.bad { background: var(--danger); color: #fff; }
 .conn.bad::before { background: #fff; animation: blink 1s infinite; }
 
@@ -131,7 +144,7 @@ button:active:not(:disabled) { transform: scale(0.97); }
 .toast {
   position: fixed;
   left: 50%;
-  top: 76px;
+  top: 80px;
   transform: translate(-50%, -8px);
   z-index: 100;
   display: flex;
@@ -144,7 +157,7 @@ button:active:not(:disabled) { transform: scale(0.97); }
   color: #fff;
   font-size: var(--t-md);
   font-weight: 700;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), 0 10px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -162,7 +175,7 @@ button:active:not(:disabled) { transform: scale(0.97); }
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.5);
 }
 .overlay[hidden] { display: none; }
 .dialog {
@@ -171,13 +184,13 @@ button:active:not(:disabled) { transform: scale(0.97); }
   max-height: 90vh;
   overflow: auto;
   padding: 24px;
-  border-radius: 20px;
+  border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12), 0 16px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow);
 }
 .dialog h2 { margin: 0 0 12px; font-size: var(--t-xl); font-weight: 800; }
 .dialog .dialog-msg { margin: 0 0 4px; font-size: var(--t-md); line-height: 1.5; }
-.dialog .dialog-input { width: 100%; margin-top: 12px; padding: 14px; font: inherit; font-size: var(--t-md); border: 2px solid var(--line); border-radius: var(--radius); }
+.dialog .dialog-input { width: 100%; margin-top: 12px; padding: 14px; font: inherit; font-size: var(--t-md); border: 1px solid var(--line-strong); border-radius: var(--radius); }
 .dialog .actions { display: flex; gap: 12px; margin-top: 20px; }
 .dialog .actions .btn { flex: 1; padding: 18px; font-size: var(--t-lg); }
 
@@ -198,9 +211,9 @@ button:active:not(:disabled) { transform: scale(0.97); }
 .badge.pending { background: var(--pending-bg); color: var(--pending); }
 .badge.requested { background: var(--requested-bg); color: var(--requested); }
 .badge.served { background: var(--served-bg); color: var(--served); }
-.badge.cancelled { background: #eceae6; color: var(--muted); text-decoration: line-through; }
+.badge.cancelled { background: var(--disabled-bg); color: var(--muted); text-decoration: line-through; }
 .badge.soldout { background: var(--danger-bg); color: var(--danger); }
-.badge.onsale { background: var(--served-bg); color: var(--served); }
+.badge.onsale { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
 .badge.late { background: var(--danger); color: #fff; }
 
 /* 메뉴 옵션 꼬리표 (예: ICE). 주방에서 한눈에 구분되도록 테두리 상자로 붙인다. */
@@ -209,7 +222,7 @@ button:active:not(:disabled) { transform: scale(0.97); }
   margin-left: 0.4em;
   padding: 0 0.4em;
   border: 2px solid currentColor;
-  border-radius: 6px;
+  border-radius: 5px;
   font-size: 0.8em;
   font-weight: 800;
   line-height: 1.3;

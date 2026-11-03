@@ -11,16 +11,17 @@
 
     /* 주방에 요청할 수량 요약: 한 줄 띠로 줄여 첫 화면에 주문표가 보이게 한다. */
     .summary { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; margin-bottom: 8px; }
-    .sum-box { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
-    .sum-box h3 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: var(--t-sm); font-weight: 800; }
-    .sum-box.pending h3 { color: var(--pending); }
-    .sum-box.requested h3 { color: var(--requested); }
-    .sum-box.pending.ringing { box-shadow: 0 0 0 3px var(--pending-edge), var(--shadow); }
+    .sum-box { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); }
+    .sum-box h2 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: var(--t-sm); font-weight: 800; }
+    .sum-box.pending h2 { color: var(--pending); }
+    .sum-box.requested h2 { color: var(--requested); }
+    .sum-box.pending.ringing { border-color: var(--pending-edge); box-shadow: 0 0 0 2px var(--pending-edge); }
     .sum-box .qty { display: flex; flex-wrap: wrap; gap: 4px 22px; }
     .sum-box .qty .q { font-size: var(--t-lg); font-weight: 700; }
     .sum-box .qty .q b { font-size: var(--t-2xl); font-weight: 800; line-height: 1.1; margin-left: 4px; font-variant-numeric: tabular-nums; }
     .sum-box .qty .q.zero { color: var(--muted); font-weight: 500; }
-    .sum-box .qty .q.zero b { font-weight: 600; }
+    .sum-box .qty .q.zero b { font-size: inherit; font-weight: 600; }
+    .sum-box .qty .none { font-size: var(--t-lg); font-weight: 600; color: var(--muted); }
     .sum-box .btn { width: 100%; margin-top: auto; padding: 14px; }
 
     .section-title {
@@ -32,7 +33,7 @@
     }
     .section-title .badge { font-size: var(--t-sm); padding: 4px 12px; }
     .section-title .count { color: var(--muted); font-weight: 700; }
-    .empty { padding: 18px; text-align: center; font-size: var(--t-md); color: var(--muted); background: var(--surface); border-radius: var(--radius); }
+    .empty { padding: 18px; text-align: center; font-size: var(--t-md); color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
 
     .tickets { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
     .ticket {
@@ -40,14 +41,14 @@
       flex-direction: column;
       gap: 10px;
       padding: 14px;
-      border-radius: 18px;
+      border-radius: var(--radius);
       background: var(--surface);
-      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
     }
-    .ticket.served { background: var(--served-bg); box-shadow: none; }
-    .ticket.late { box-shadow: 0 0 0 3px var(--danger), var(--shadow); }
+    .ticket.served { background: var(--served-bg); border-color: var(--served-bg); }
+    .ticket.late { border-color: var(--danger); box-shadow: 0 0 0 2px var(--danger); }
     .ticket.fresh { animation: flash 1s ease-in-out 3; }
-    @keyframes flash { 50% { background: #fff3b0; } }
+    @keyframes flash { 50% { background: var(--pending-bg); } }
 
     .ticket .head { display: flex; align-items: flex-start; gap: 10px; }
     .ticket .tno { font-size: var(--t-3xl); font-weight: 900; line-height: 1; }
@@ -60,7 +61,7 @@
     .ticket .items { font-size: var(--t-xl); font-weight: 800; line-height: 1.3; }
     .ticket .items > div + div { margin-top: 4px; }
     .ticket .items .x { white-space: nowrap; }
-    .ticket .note { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 10px; background: #fff0b8; font-size: var(--t-md); font-weight: 700; }
+    .ticket .note { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line-strong); font-size: var(--t-md); font-weight: 700; }
     .ticket .buttons { display: flex; gap: 12px; }
     .ticket .buttons .btn { flex: 1; padding: 16px 10px; font-size: var(--t-lg); }
     .ticket .buttons .btn-ghost { flex: 0 0 auto; padding: 16px 14px; font-size: var(--t-sm); }
@@ -68,8 +69,8 @@
 
     details.served-list summary { cursor: pointer; list-style: none; }
     details.served-list summary::-webkit-details-marker { display: none; }
-    details.served-list summary::after { content: ' ▸'; color: var(--muted); }
-    details.served-list[open] summary::after { content: ' ▾'; }
+    details.served-list summary .chev { color: var(--muted); transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+    details.served-list[open] summary .chev { transform: rotate(90deg); }
 
     .start {
       position: fixed;
@@ -88,8 +89,10 @@
     .start[hidden] { display: none; }
     .start h2 { margin: 0; font-size: var(--t-2xl); font-weight: 800; }
     .start p { margin: 0; font-size: var(--t-lg); font-weight: 600; line-height: 1.5; max-width: 28em; }
-    .start p.sub { font-size: var(--t-md); font-weight: 500; color: #d8d3ca; }
+    .start p.sub { font-size: var(--t-md); font-weight: 500; color: #c9c9c9; }
     .start .btn { margin-top: 10px; padding: 22px 48px; font-size: var(--t-xl); }
+    .start .btn-primary { background: #fff; color: var(--text); }
+    .start .btn-primary:active:not(:disabled) { background: #e6e6e6; }
 
     body.alert-flash::after {
       content: "";
@@ -117,12 +120,12 @@
   <main>
     <div class="summary">
       <div class="sum-box pending">
-        <h3><i data-icon="bell"></i>주방에 요청할 수량 (대기)</h3>
+        <h2><i data-icon="bell"></i>주방에 요청할 수량 (대기)</h2>
         <div class="qty" id="sum-pending"></div>
         <button class="btn btn-requested" id="request-all"><i data-icon="send"></i><span>모두 주방에 요청</span></button>
       </div>
       <div class="sum-box requested">
-        <h3><i data-icon="chef-hat"></i>조리 중 (주방 요청됨)</h3>
+        <h2><i data-icon="chef-hat"></i>조리 중 (주방 요청됨)</h2>
         <div class="qty" id="sum-requested"></div>
       </div>
     </div>
@@ -134,7 +137,7 @@
     <div class="tickets" id="list-requested"></div>
 
     <details class="served-list" id="served-details">
-      <summary class="section-title"><span class="badge served"><i data-icon="circle-check-big"></i>서빙 완료</span><span class="count" id="count-served"></span></summary>
+      <summary class="section-title"><span class="badge served"><i data-icon="circle-check-big"></i>서빙 완료</span><span class="count" id="count-served"></span><i data-icon="chevron-right" class="chev"></i></summary>
       <div class="tickets" id="list-served"></div>
     </details>
   </main>
@@ -282,8 +285,10 @@
         for (const [label, t] of variants) { rows.push({ html: Kiosk.itemHtml(t.item), n: t.n }); shown.add(label); }
       }
       for (const [label, t] of totals) if (!shown.has(label)) rows.push({ html: Kiosk.itemHtml(t.item), n: t.n });
-      el.innerHTML = rows.map(({ html, n }) =>
-        `<div class="q${n ? '' : ' zero'}">${html}<b>${n}</b>개</div>`).join('') || '<div class="q zero">—</div>';
+      // 전부 0이면 0을 여러 개 늘어놓지 않고 "없음" 한 줄로.
+      el.innerHTML = rows.some((r) => r.n)
+        ? rows.map(({ html, n }) => `<div class="q${n ? '' : ' zero'}">${html}<b>${n}</b>개</div>`).join('')
+        : '<div class="none">없음</div>';
     }
 
     function ticketHtml({ order, ticket, key }) {

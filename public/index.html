@@ -14,9 +14,9 @@
       align-items: center;
       gap: 18px;
       padding: 24px;
-      border-radius: 20px;
+      border-radius: var(--radius);
       background: var(--surface);
-      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
       color: var(--text);
       text-decoration: none;
       font-size: var(--t-xl);
@@ -26,7 +26,7 @@
     .links a .icon { width: 2.2rem; height: 2.2rem; color: var(--primary); }
     .links a small { display: block; margin-top: 4px; font-size: var(--t-sm); font-weight: 500; color: var(--muted); }
     /* 관리자는 실수로 누르지 않도록 한 단계 낮춘다. */
-    .links a.minor { margin-top: 18px; padding: 16px 20px; border-radius: var(--radius); background: transparent; box-shadow: none; border: 2px solid var(--line); font-size: var(--t-md); }
+    .links a.minor { margin-top: 18px; padding: 16px 20px; border-radius: var(--radius); background: transparent; border: 1px solid var(--line-strong); font-size: var(--t-md); }
     .links a.minor .icon { width: 1.5rem; height: 1.5rem; color: var(--muted); }
   </style>
 </head>

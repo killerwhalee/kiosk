@@ -19,6 +19,7 @@ const NAMES = [
   'bell',
   'bell-off',
   'chef-hat',
+  'chevron-right',
   'circle-check-big',
   'circle-x',
   'clipboard-list',
