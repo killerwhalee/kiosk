@@ -161,6 +161,17 @@ const Kiosk = (() => {
     return min < 1 ? '방금' : `${min}분 전`;
   }
 
+  /** 주문 항목 이름 + 고른 옵션. 예: "아메리카노 (ICE, 샷 추가)" */
+  function itemLabel(it) {
+    return it.options && it.options.length ? `${it.name} (${it.options.join(', ')})` : it.name;
+  }
+
+  /** 옵션을 눈에 띄는 꼬리표로 붙인 HTML 이름 */
+  function itemHtml(it) {
+    const opts = (it.options || []).map((o) => `<span class="opt">${esc(o)}</span>`).join('');
+    return `${esc(it.name)}${opts}`;
+  }
+
   function esc(s) {
     return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   }
@@ -227,5 +238,5 @@ const Kiosk = (() => {
       .then((ok) => { if (ok) location.href = link.href; });
   });
 
-  return { STATUS_LABEL, STATUS_ICON, setLeaveGuard, confirmDialog, badge, icon, renderIcons, connect, api, toast, won, time, elapsed, elapsedMinutes, esc, requestId, keepAwake };
+  return { STATUS_LABEL, STATUS_ICON, setLeaveGuard, confirmDialog, badge, icon, renderIcons, connect, api, toast, won, itemLabel, itemHtml, time, elapsed, elapsedMinutes, esc, requestId, keepAwake };
 })();

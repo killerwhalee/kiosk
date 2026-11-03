@@ -154,7 +154,17 @@
       const valid = state.orders.filter((o) => !o.cancelled);
       const revenue = valid.reduce((s, o) => s + o.total, 0);
       const perMenu = {};
-      for (const o of valid) for (const t of o.tickets) for (const it of t.items) perMenu[it.menuId] = (perMenu[it.menuId] || 0) + it.qty;
+      const perMenuWon = {};
+      const perVariant = {};  // menuId -> { "ICE": 수량 }
+      for (const o of valid) for (const t of o.tickets) for (const it of t.items) {
+        perMenu[it.menuId] = (perMenu[it.menuId] || 0) + it.qty;
+        perMenuWon[it.menuId] = (perMenuWon[it.menuId] || 0) + it.qty * it.price;
+        if (it.options && it.options.length) {
+          const v = (perVariant[it.menuId] ||= {});
+          const key = it.options.join('/');
+          v[key] = (v[key] || 0) + it.qty;
+        }
+      }
       const tickets = valid.flatMap((o) => o.tickets);
       const count = (st) => tickets.filter((t) => t.status === st).length;
 
@@ -163,7 +173,8 @@
         ...state.menus.map((m) => ({
           label: m.name,
           value: `${perMenu[m.id] || 0}개`,
-          sub: won((perMenu[m.id] || 0) * m.price),
+          sub: [won(perMenuWon[m.id] || 0),
+            Object.entries(perVariant[m.id] || {}).map(([k, n]) => `${k} ${n}`).join(', ')].filter(Boolean).join(' · '),
         })),
       ];
       const tally = ['pending', 'requested', 'served']
@@ -188,6 +199,8 @@
             <div class="info">
               <div class="name">${esc(m.name)}${m.soldOut ? '<span class="badge soldout">품절</span>' : '<span class="badge onsale">판매 중</span>'}</div>
               <div class="muted">${won(m.price)} · ${esc(station ? station.name : '')}</div>
+              ${m.options.map((g) => `<div class="muted">${esc(g.name)}: ${g.choices.map((c) =>
+                `${esc(c.name)}${c.price ? ` (${c.price > 0 ? '+' : ''}${won(c.price)})` : ''}`).join(' / ')}</div>`).join('')}
             </div>
             <button class="btn ${m.soldOut ? '' : 'btn-ghost'}" data-soldout="${esc(m.id)}" data-value="${m.soldOut ? 'false' : 'true'}">
               ${m.soldOut ? `${Kiosk.icon('rotate-ccw')}판매 재개` : `${Kiosk.icon('ban')}품절로 바꾸기`}
@@ -215,7 +228,7 @@
         return;
       }
       $('orders').innerHTML = list.map((o) => {
-        const items = o.tickets.flatMap((t) => t.items).map((it) => `${esc(it.name)} ${it.qty}`).join(', ');
+        const items = o.tickets.flatMap((t) => t.items).map((it) => `${esc(Kiosk.itemLabel(it))} ${it.qty}`).join(', ');
         const statuses = o.cancelled
           ? '<span class="badge cancelled">취소됨</span>'
           : o.tickets.map((t) => {

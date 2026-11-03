@@ -58,6 +58,8 @@
     .ticket.late .elapsed { color: var(--danger); }
     .ticket .sub { font-size: var(--t-xs); font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
     .ticket .items { font-size: var(--t-xl); font-weight: 800; line-height: 1.3; }
+    .ticket .items > div + div { margin-top: 4px; }
+    .ticket .items .x { white-space: nowrap; }
     .ticket .note { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 10px; background: #fff0b8; font-size: var(--t-md); font-weight: 700; }
     .ticket .buttons { display: flex; gap: 12px; }
     .ticket .buttons .btn { flex: 1; padding: 16px 10px; font-size: var(--t-lg); }
@@ -251,10 +253,16 @@
       return list;
     }
 
+    /** 메뉴+옵션 조합별 수량. 이름 → { menuId, n } */
     function sumByMenu(entries) {
       const totals = new Map();
       for (const { ticket } of entries) {
-        for (const it of ticket.items) totals.set(it.name, (totals.get(it.name) || 0) + it.qty);
+        for (const it of ticket.items) {
+          const label = Kiosk.itemLabel(it);
+          const t = totals.get(label) || { menuId: it.menuId, item: it, n: 0 };
+          t.n += it.qty;
+          totals.set(label, t);
+        }
       }
       return totals;
     }
@@ -265,17 +273,23 @@
 
     function renderSum(el, entries) {
       const totals = sumByMenu(entries);
-      const names = [...new Set([...menuNames(), ...totals.keys()])];
-      el.innerHTML = names.map((name) => {
-        const n = totals.get(name) || 0;
-        return `<div class="q${n ? '' : ' zero'}">${esc(name)}<b>${n}</b>개</div>`;
-      }).join('') || '<div class="q zero">—</div>';
+      // 이 주방 메뉴 순서대로. 옵션 조합이 있으면 조합별로, 하나도 없으면 메뉴 이름에 0개로 보여 준다.
+      const rows = [];
+      const shown = new Set();
+      for (const m of state.menus.filter((x) => x.station === stationId)) {
+        const variants = [...totals].filter(([, t]) => t.menuId === m.id);
+        if (!variants.length) rows.push({ html: esc(m.name), n: 0 });
+        for (const [label, t] of variants) { rows.push({ html: Kiosk.itemHtml(t.item), n: t.n }); shown.add(label); }
+      }
+      for (const [label, t] of totals) if (!shown.has(label)) rows.push({ html: Kiosk.itemHtml(t.item), n: t.n });
+      el.innerHTML = rows.map(({ html, n }) =>
+        `<div class="q${n ? '' : ' zero'}">${html}<b>${n}</b>개</div>`).join('') || '<div class="q zero">—</div>';
     }
 
     function ticketHtml({ order, ticket, key }) {
       const minutes = Kiosk.elapsedMinutes(order.createdAt);
       const late = ticket.status !== 'served' && minutes >= LATE_MINUTES;
-      const items = ticket.items.map((it) => `<div>${esc(it.name)} × ${it.qty}</div>`).join('');
+      const items = ticket.items.map((it) => `<div>${Kiosk.itemHtml(it)} <span class="x">× ${it.qty}</span></div>`).join('');
       const note = order.note ? `<div class="note">${Kiosk.icon('sticky-note')}${esc(order.note)}</div>` : '';
       let buttons = '';
       if (ticket.status === 'pending') {

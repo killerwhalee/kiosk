@@ -7,8 +7,17 @@
     { "id": 2, "name": "주방" }
   ],
   "menus": [
-    { "id": "americano", "name": "아메리카노", "price": 3000, "station": 1 },
-    { "id": "latte", "name": "카페라테", "price": 3500, "station": 1 },
+    {
+      "id": "americano", "name": "아메리카노", "price": 3000, "station": 1,
+      "options": [
+        { "name": "온도", "choices": ["HOT", { "name": "ICE", "price": 500 }] },
+        { "name": "샷", "choices": ["기본", { "name": "샷 추가", "price": 500 }] }
+      ]
+    },
+    {
+      "id": "latte", "name": "카페라테", "price": 3500, "station": 1,
+      "options": [{ "name": "온도", "choices": ["HOT", { "name": "ICE", "price": 500 }] }]
+    },
     { "id": "lemonade", "name": "레몬에이드", "price": 4000, "station": 1 },
     { "id": "sandwich", "name": "샌드위치", "price": 5500, "station": 2 },
     { "id": "cheesecake", "name": "치즈케이크", "price": 5000, "station": 2 }

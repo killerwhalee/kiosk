@@ -65,6 +65,36 @@
     .stepper button:disabled { background: var(--disabled-bg); color: var(--disabled-text); }
     .stepper .qty { min-width: 2ch; text-align: center; font-size: var(--t-2xl); font-weight: 800; font-variant-numeric: tabular-nums; }
     .stepper .qty.zero { color: var(--disabled-text); }
+    /* 옵션 (예: HOT / ICE) */
+    .menu.has-options { flex-wrap: wrap; }
+    .options { flex-basis: 100%; display: flex; flex-direction: column; gap: 10px; }
+    .opt-group { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .opt-group .gname { min-width: 3.5em; font-size: var(--t-sm); font-weight: 700; color: var(--muted); }
+    .opt-group button {
+      min-height: 56px;
+      min-width: 88px;
+      padding: 8px 18px;
+      border: 2px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+      font-size: var(--t-md);
+      font-weight: 800;
+    }
+    .opt-group button small { display: block; font-size: var(--t-xs); font-weight: 600; color: var(--muted); }
+    .opt-group button.on { border-color: var(--primary); background: var(--primary); color: #fff; }
+    .opt-group button.on small { color: #fff; }
+    .opt-group button:disabled { opacity: 0.5; }
+    .in-cart { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--t-sm); font-weight: 700; color: var(--muted); }
+    .in-cart button {
+      min-height: 44px;
+      padding: 6px 14px;
+      background: var(--pending-bg);
+      color: var(--text);
+      font-size: var(--t-sm);
+      font-weight: 800;
+    }
+    .in-cart button.on { box-shadow: inset 0 0 0 2px var(--primary); }
+    .in-cart button b { margin-left: 6px; font-variant-numeric: tabular-nums; }
     .note { margin-top: 18px; }
     .note input {
       width: 100%;
@@ -168,7 +198,8 @@
 
     let state = null;
     let table = null;
-    let cart = {};            // menuId -> qty
+    let cart = {};            // key -> { menuId, options: [선택지 이름], qty }
+    let picked = {};          // menuId -> [옵션별로 고른 선택지 번호] (옵션 있는 메뉴만)
     let pendingRequestId = null;
     let sending = false;
     let doneTimer = null;
@@ -193,6 +224,7 @@
     function resetOrder() {
       table = null;
       cart = {};
+      picked = {};
       pendingRequestId = null;
       $('note').value = '';
       clearInterval(doneTimer);
@@ -214,7 +246,7 @@
         ? `<h3>최근 주문</h3><ul>${recent.map((o) => `
             <li>
               <span class="tno">${o.tableNo}번</span>
-              <span class="items">${o.tickets.flatMap((t) => t.items).map((it) => `${esc(it.name)} ${it.qty}`).join(', ')}</span>
+              <span class="items">${o.tickets.flatMap((t) => t.items).map((it) => `${esc(Kiosk.itemLabel(it))} ${it.qty}`).join(', ')}</span>
               <span class="muted">${Kiosk.time(o.createdAt)}</span>
             </li>`).join('')}</ul>`
         : '';
@@ -229,37 +261,85 @@
       return counts;
     }
 
+    const cartKey = (menuId, options) => JSON.stringify([menuId, options]);
+
+    /** 이 메뉴에서 지금 고른 선택지들 */
+    function selection(m) {
+      const idx = picked[m.id] || m.options.map(() => 0);
+      const choices = m.options.map((g, i) => g.choices[idx[i]] || g.choices[0]);
+      return {
+        options: choices.map((c) => c.name),
+        price: m.price + choices.reduce((s, c) => s + c.price, 0),
+      };
+    }
+
+    const plusWon = (n) => (n > 0 ? `+${won(n)}` : n < 0 ? `-${won(-n)}` : '');
+
+    function optionsHtml(m) {
+      const idx = picked[m.id] || m.options.map(() => 0);
+      const groups = m.options.map((g, gi) => `
+        <div class="opt-group" role="group" aria-label="${esc(g.name)}">
+          <span class="gname">${esc(g.name)}</span>
+          ${g.choices.map((c, ci) => `
+            <button class="${idx[gi] === ci ? 'on' : ''}" data-opt-menu="${esc(m.id)}" data-group="${gi}" data-choice="${ci}"
+              aria-pressed="${idx[gi] === ci}" ${m.soldOut ? 'disabled' : ''}>${esc(c.name)}${c.price ? `<small>${plusWon(c.price)}</small>` : ''}</button>`).join('')}
+        </div>`).join('');
+      const current = cartKey(m.id, selection(m).options);
+      const inCart = Object.entries(cart).filter(([, l]) => l.menuId === m.id);
+      const chips = inCart.length
+        ? `<div class="in-cart">담음
+            ${inCart.map(([key, l]) => `<button class="${key === current ? 'on' : ''}" data-pick="${esc(key)}">${esc(l.options.join(' · '))}<b>${l.qty}</b></button>`).join('')}
+          </div>`
+        : '';
+      return `<div class="options">${groups}${chips}</div>`;
+    }
+
     function renderMenus() {
       if (!state || table == null) return;
       $('current-table').textContent = `${table}번 테이블`;
       $('menus').innerHTML = state.menus.map((m) => {
-        const qty = cart[m.id] || 0;
+        const hasOptions = m.options.length > 0;
+        const sel = selection(m);
+        const line = cart[cartKey(m.id, sel.options)];
+        const qty = line ? line.qty : 0;
+        const anyPicked = Object.values(cart).some((l) => l.menuId === m.id);
         return `
-          <div class="menu ${m.soldOut ? 'sold-out' : qty ? 'picked' : ''}">
+          <div class="menu ${hasOptions ? 'has-options' : ''} ${m.soldOut ? 'sold-out' : anyPicked ? 'picked' : ''}">
             <div class="info">
               <div class="name">${esc(m.name)}</div>
-              <div class="price">${m.soldOut ? '<span class="badge soldout">품절</span>' : won(m.price)}</div>
+              <div class="price">${m.soldOut ? '<span class="badge soldout">품절</span>' : won(sel.price)}</div>
             </div>
             <div class="stepper">
               <button data-menu="${esc(m.id)}" data-delta="-1" ${qty === 0 ? 'disabled' : ''} aria-label="빼기">${Kiosk.icon('minus')}</button>
               <span class="qty ${qty ? '' : 'zero'}">${qty}</span>
               <button class="plus" data-menu="${esc(m.id)}" data-delta="1" ${m.soldOut ? 'disabled' : ''} aria-label="더하기">${Kiosk.icon('plus')}</button>
             </div>
+            ${hasOptions ? optionsHtml(m) : ''}
           </div>`;
       }).join('');
       renderCart();
     }
 
+    /** 확인 창·합계에 쓰는 장바구니 줄 (메뉴 순서대로) */
     function cartLines() {
-      return state.menus
-        .filter((m) => cart[m.id] > 0)
-        .map((m) => ({ menu: m, qty: cart[m.id] }));
+      const lines = [];
+      for (const m of state.menus) {
+        for (const l of Object.values(cart)) {
+          if (l.menuId !== m.id) continue;
+          const extra = l.options.reduce((s, name, i) => {
+            const c = m.options[i] && m.options[i].choices.find((x) => x.name === name);
+            return s + (c ? c.price : 0);
+          }, 0);
+          lines.push({ name: m.name, options: l.options, price: m.price + extra, qty: l.qty });
+        }
+      }
+      return lines;
     }
 
     function renderCart() {
       const lines = cartLines();
       const count = lines.reduce((s, l) => s + l.qty, 0);
-      const total = lines.reduce((s, l) => s + l.qty * l.menu.price, 0);
+      const total = lines.reduce((s, l) => s + l.qty * l.price, 0);
       $('cart-count').textContent = count ? `${count}개 선택` : '메뉴를 선택하세요';
       $('cart-total').textContent = won(total);
       $('review').disabled = count === 0;
@@ -268,10 +348,10 @@
     function openConfirm() {
       const lines = cartLines();
       if (!lines.length) return;
-      const total = lines.reduce((s, l) => s + l.qty * l.menu.price, 0);
+      const total = lines.reduce((s, l) => s + l.qty * l.price, 0);
       $('confirm-table').textContent = `${table}번 테이블`;
       $('confirm-lines').innerHTML =
-        lines.map((l) => `<tr><td>${esc(l.menu.name)} × ${l.qty}</td><td>${won(l.qty * l.menu.price)}</td></tr>`).join('') +
+        lines.map((l) => `<tr><td>${Kiosk.itemHtml(l)} × ${l.qty}</td><td>${won(l.qty * l.price)}</td></tr>`).join('') +
         `<tr class="total"><td>합계</td><td>${won(total)}</td></tr>`;
       const note = $('note').value.trim();
       $('confirm-note').innerHTML = note ? `${Kiosk.icon('sticky-note')} 요청사항: ${esc(note)}` : '';
@@ -287,7 +367,7 @@
       try {
         const order = await Kiosk.api('/api/orders', {
           tableNo: table,
-          items: Object.entries(cart).map(([menuId, qty]) => ({ menuId, qty })),
+          items: Object.values(cart).map(({ menuId, options, qty }) => ({ menuId, options, qty })),
           note: $('note').value,
           requestId: pendingRequestId,
         });
@@ -297,6 +377,7 @@
         show('done');
         table = null;
         cart = {};
+        picked = {};
         pendingRequestId = null;
         $('note').value = '';
       } catch (err) {
@@ -319,11 +400,30 @@
     });
 
     $('menus').addEventListener('click', (e) => {
+      const opt = e.target.closest('button[data-opt-menu]');
+      if (opt) {
+        const m = state.menus.find((x) => x.id === opt.dataset.optMenu);
+        const idx = (picked[m.id] || m.options.map(() => 0)).slice();
+        idx[Number(opt.dataset.group)] = Number(opt.dataset.choice);
+        picked[m.id] = idx;
+        return renderMenus();
+      }
+      const pick = e.target.closest('button[data-pick]');
+      if (pick) {
+        // 담아 둔 옵션 조합을 누르면 그 조합을 다시 골라, 옆의 +/- 로 수량을 고칠 수 있다.
+        const l = cart[pick.dataset.pick];
+        const m = state.menus.find((x) => x.id === l.menuId);
+        picked[m.id] = m.options.map((g, i) => Math.max(0, g.choices.findIndex((c) => c.name === l.options[i])));
+        return renderMenus();
+      }
       const btn = e.target.closest('button[data-menu]');
       if (!btn) return;
-      const id = btn.dataset.menu;
-      cart[id] = Math.max(0, Math.min(99, (cart[id] || 0) + Number(btn.dataset.delta)));
-      if (!cart[id]) delete cart[id];
+      const m = state.menus.find((x) => x.id === btn.dataset.menu);
+      const { options } = selection(m);
+      const key = cartKey(m.id, options);
+      const qty = Math.max(0, Math.min(99, (cart[key] ? cart[key].qty : 0) + Number(btn.dataset.delta)));
+      if (qty) cart[key] = { menuId: m.id, options, qty };
+      else delete cart[key];
       pendingRequestId = null;
       renderMenus();
     });
@@ -346,7 +446,13 @@
       document.title = `주문 입력 · ${s.title}`;
       $('title').textContent = '주문 입력';
       // 품절된 메뉴가 장바구니에 있으면 뺀다.
-      for (const m of s.menus) if (m.soldOut && cart[m.id]) { delete cart[m.id]; Kiosk.toast(`${m.name} 품절 — 장바구니에서 뺐습니다.`, true); }
+      for (const m of s.menus) {
+        if (!m.soldOut) continue;
+        const keys = Object.keys(cart).filter((k) => cart[k].menuId === m.id);
+        if (!keys.length) continue;
+        for (const k of keys) delete cart[k];
+        Kiosk.toast(`${m.name} 품절 — 장바구니에서 뺐습니다.`, true);
+      }
       if (!$('step-table').hidden) renderTables();
       if (!$('step-menu').hidden) renderMenus();
     });

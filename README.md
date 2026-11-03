@@ -57,8 +57,17 @@ Git이 없다면 GitHub 저장소 페이지에서 **Code → Download ZIP**으�
     { "id": 2, "name": "주방" }
   ],
   "menus": [
-    { "id": "americano", "name": "아메리카노", "price": 3000, "station": 1 },
-    { "id": "latte", "name": "카페라테", "price": 3500, "station": 1 },
+    {
+      "id": "americano", "name": "아메리카노", "price": 3000, "station": 1,
+      "options": [
+        { "name": "온도", "choices": ["HOT", { "name": "ICE", "price": 500 }] },
+        { "name": "샷", "choices": ["기본", { "name": "샷 추가", "price": 500 }] }
+      ]
+    },
+    {
+      "id": "latte", "name": "카페라테", "price": 3500, "station": 1,
+      "options": [{ "name": "온도", "choices": ["HOT", { "name": "ICE", "price": 500 }] }]
+    },
     { "id": "lemonade", "name": "레몬에이드", "price": 4000, "station": 1 },
     { "id": "sandwich", "name": "샌드위치", "price": 5500, "station": 2 },
     { "id": "cheesecake", "name": "치즈케이크", "price": 5000, "station": 2 }
@@ -72,7 +81,7 @@ Git이 없다면 GitHub 저장소 페이지에서 **Code → Download ZIP**으�
 | `port` | 서버 포트 (생략하면 3000) |
 | `tables` | 테이블 개수. 주문 화면에 1번부터 이 번호까지 버튼이 생깁니다 |
 | `stations` | 주방(준비 구역) 목록. 하나만 둬도 되고 여러 개여도 됩니다 |
-| `menus` | 메뉴 목록. `station`에 그 메뉴를 만드는 주방의 `id`를 적습니다 |
+| `menus` | 메뉴 목록. `station`에 그 메뉴를 만드는 주방의 `id`를 적습니다. `options`로 HOT/ICE 같은 선택지를 붙일 수 있습니다 ([매뉴얼](docs/MANUAL.md#옵션-hotice-사이즈-등)) |
 
 포트, 관리자 PIN, 저장 파일 위치는 환경 변수로 바꿉니다.
 

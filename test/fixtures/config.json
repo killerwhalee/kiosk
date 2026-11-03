@@ -7,6 +7,13 @@
   ],
   "menus": [
     { "id": "bulgogi", "name": "불고기", "price": 10000, "station": 1 },
-    { "id": "lasagna", "name": "라자냐", "price": 10000, "station": 2 }
+    { "id": "lasagna", "name": "라자냐", "price": 10000, "station": 2 },
+    {
+      "id": "coffee", "name": "커피", "price": 3000, "station": 2,
+      "options": [
+        { "name": "온도", "choices": ["HOT", { "name": "ICE", "price": 500 }] },
+        { "name": "크기", "choices": ["보통", { "name": "큰 컵", "price": 1000 }] }
+      ]
+    }
   ]
 }

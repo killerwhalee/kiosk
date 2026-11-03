@@ -108,3 +108,38 @@ test('변경될 때마다 구독자에게 최신 상태를 알린다', () => {
   store.requestAll(1);
   assert.deepStrictEqual(seen, [1, 1]);
 });
+
+test('옵션별로 줄을 나누고 추가 금액을 더한다', () => {
+  const store = new Store(config, null);
+  const order = store.createOrder({
+    tableNo: 1,
+    items: [
+      { menuId: 'coffee', options: ['ICE', '큰 컵'], qty: 2 },
+      { menuId: 'coffee', options: ['HOT', '보통'], qty: 1 },
+      { menuId: 'coffee', options: ['ICE', '큰 컵'], qty: 1 },
+      { menuId: 'coffee', qty: 1 }, // 옵션을 비우면 기본값(첫 선택지)
+    ],
+  });
+  const items = order.tickets[0].items.map((i) => [i.options, i.price, i.qty]);
+  assert.deepStrictEqual(items, [[['ICE', '큰 컵'], 4500, 3], [['HOT', '보통'], 3000, 2]]);
+  assert.strictEqual(order.total, 4500 * 3 + 3000 * 2);
+  // 옵션 없는 메뉴는 빈 목록
+  const plain = store.createOrder({ tableNo: 1, items: [{ menuId: 'bulgogi', qty: 1 }] });
+  assert.deepStrictEqual(plain.tickets[0].items[0].options, []);
+});
+
+test('잘못된 옵션은 거부한다', () => {
+  const store = new Store(config, null);
+  assert.throws(() => store.createOrder({ tableNo: 1, items: [{ menuId: 'coffee', options: ['ICE'], qty: 1 }] }), /옵션/);
+  assert.throws(() => store.createOrder({ tableNo: 1, items: [{ menuId: 'coffee', options: ['WARM', '보통'], qty: 1 }] }), /옵션/);
+  assert.throws(() => store.createOrder({ tableNo: 1, items: [{ menuId: 'bulgogi', options: ['ICE'], qty: 1 }] }), /옵션/);
+});
+
+test('설정 파일의 옵션 형식이 틀리면 알기 쉬운 오류를 낸다', () => {
+  const bad = (options) => ({ ...config, menus: [{ id: 'x', name: '엑스', price: 1, station: 1, options }] });
+  assert.throws(() => new Store(bad([{ name: '온도' }]), null), /choices/);
+  assert.throws(() => new Store(bad([{ name: '온도', choices: ['HOT', 'HOT'] }]), null), /같은 이름/);
+  assert.throws(() => new Store(bad('HOT'), null), /목록/);
+  const ok = new Store(bad([{ name: '온도', choices: ['HOT', { name: 'ICE', price: 500 }] }]), null);
+  assert.deepStrictEqual(ok.snapshot().menus[0].options, [{ name: '온도', choices: [{ name: 'HOT', price: 0 }, { name: 'ICE', price: 500 }] }]);
+});
