@@ -24,12 +24,13 @@
     .tally-row .served .n { color: var(--served); }
 
     .menus { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
-    .menu-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+    /* 카드 높이가 달라도 버튼은 항상 카드 맨 아래 같은 높이에 놓는다. */
+    .menu-row { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
     .menu-row.sold-out { background: var(--danger-bg); }
-    .menu-row .info { flex: 1 1 180px; min-width: 0; }
+    .menu-row .info { width: 100%; min-width: 0; }
     .menu-row .name { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: var(--t-lg); }
     .menu-row .muted { font-size: var(--t-sm); margin-top: 2px; }
-    .menu-row .btn { flex-shrink: 0; white-space: nowrap; }
+    .menu-row .btn { margin-top: auto; white-space: nowrap; }
 
     .links { display: flex; flex-wrap: wrap; gap: 10px; }
     .links a { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 10px 16px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); color: var(--text); text-decoration: none; font-weight: 700; font-size: var(--t-md); }
@@ -38,9 +39,11 @@
     table.orders { width: 100%; border-collapse: collapse; background: var(--surface); font-size: var(--t-md); font-variant-numeric: tabular-nums; }
     table.orders th, table.orders td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
     table.orders th { background: var(--surface-2); font-size: var(--t-sm); font-weight: 700; color: var(--muted); }
-    table.orders td.items { white-space: normal; min-width: 180px; }
+    table.orders td.items { white-space: normal; min-width: 180px; line-height: 1.5; }
+    table.orders td.items .it { white-space: nowrap; }  /* 메뉴 하나당 한 줄, 중간에서 끊지 않는다 */
     table.orders tr.cancelled td { color: var(--muted); text-decoration: line-through; }
     table.orders tr.cancelled td:last-child, table.orders tr.cancelled td.status { text-decoration: none; }
+    table.orders td.status { white-space: normal; }
     table.orders td.status .badge { margin: 2px 4px 2px 0; }
     table.orders .btn { min-height: 44px; padding: 8px 14px; font-size: var(--t-sm); }
     .filter { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -229,7 +232,7 @@
         return;
       }
       $('orders').innerHTML = list.map((o) => {
-        const items = o.tickets.flatMap((t) => t.items).map((it) => `${esc(Kiosk.itemLabel(it))} ${it.qty}`).join(', ');
+        const items = o.tickets.flatMap((t) => t.items).map((it) => `<div class="it">${Kiosk.itemHtml(it)} × ${it.qty}</div>`).join('');
         const statuses = o.cancelled
           ? '<span class="badge cancelled">취소됨</span>'
           : o.tickets.map((t) => {
